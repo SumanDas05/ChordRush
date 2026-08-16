@@ -1,4 +1,4 @@
-// Chord Runner - Step 4: Player Character
+// Chord Runner - Step 5: Obstacles
 
 // ---- Screen elements ----
 const startScreen = document.getElementById("start-screen");
@@ -14,20 +14,22 @@ const GAME_HEIGHT = canvas.height;
 const GROUND_Y = GAME_HEIGHT - 50;
 
 let isRunning = false;
+let isGameOver = false;
 
 // ---- Physics constants ----
-const GRAVITY = 0.6;        // how fast the player accelerates downward each frame
-const JUMP_FORCE = -12.5;   // upward velocity applied on jump (negative = upward in canvas coords)
+const GRAVITY = 0.6;
+const JUMP_FORCE = -12.5;
+
+// ---- World scroll speed ----
+const WORLD_SPEED = 5; // how fast obstacles move toward the player each frame
 
 // ---- Player object ----
-// Everything about the player lives in one object, so it's easy to
-// pass around, reset, and reason about.
 const player = {
-  x: 100,                 // fixed horizontal position (the world moves, not the player, in endless runners)
-  y: GROUND_Y - 50,       // vertical position (top-left corner of the player box)
+  x: 100,
+  y: GROUND_Y - 50,
   width: 40,
   height: 50,
-  velocityY: 0,           // current vertical speed
+  velocityY: 0,
   isOnGround: true
 };
 
@@ -37,16 +39,10 @@ function resetPlayer() {
   player.isOnGround = true;
 }
 
-// ---- Player physics update ----
-// Called every frame. Applies gravity, moves the player, and clamps to the ground.
 function updatePlayer() {
-  // Apply gravity to velocity
   player.velocityY += GRAVITY;
-
-  // Apply velocity to position
   player.y += player.velocityY;
 
-  // Ground collision: don't let the player fall through the floor
   const groundLevel = GROUND_Y - player.height;
   if (player.y >= groundLevel) {
     player.y = groundLevel;
@@ -64,10 +60,80 @@ function jump() {
   }
 }
 
+// ---- Obstacles ----
+let obstacles = [];
+let framesSinceLastSpawn = 0;
+let framesUntilNextSpawn = randomSpawnGap();
+
+function randomSpawnGap() {
+  // Random number of frames between spawns (roughly 1.3 to 2.3 seconds at 60fps)
+  return Math.floor(Math.random() * 60) + 80;
+}
+
+function spawnObstacle() {
+  const size = 30 + Math.random() * 20; // vary size a bit: 30-50px
+  obstacles.push({
+    x: GAME_WIDTH + size,
+    y: GROUND_Y - size,
+    width: size,
+    height: size
+  });
+}
+
+function updateObstacles() {
+  // Spawn timer
+  framesSinceLastSpawn++;
+  if (framesSinceLastSpawn >= framesUntilNextSpawn) {
+    spawnObstacle();
+    framesSinceLastSpawn = 0;
+    framesUntilNextSpawn = randomSpawnGap();
+  }
+
+  // Move obstacles left, remove ones that go off-screen
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    obstacles[i].x -= WORLD_SPEED;
+    if (obstacles[i].x + obstacles[i].width < 0) {
+      obstacles.splice(i, 1);
+    }
+  }
+}
+
+// ---- Collision detection (simple AABB - axis-aligned bounding box) ----
+function checkCollision(a, b) {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  );
+}
+
+function checkAllCollisions() {
+  for (const obstacle of obstacles) {
+    if (checkCollision(player, obstacle)) {
+      triggerGameOver();
+      break;
+    }
+  }
+}
+
+function triggerGameOver() {
+  isGameOver = true;
+  isRunning = false;
+}
+
+function resetGame() {
+  obstacles = [];
+  framesSinceLastSpawn = 0;
+  framesUntilNextSpawn = randomSpawnGap();
+  isGameOver = false;
+  resetPlayer();
+}
+
 // ---- Keyboard controls (TEMPORARY - Spacebar for testing only) ----
 document.addEventListener("keydown", (e) => {
   if (e.code === "Space" && isRunning) {
-    e.preventDefault(); // stop the page from scrolling on spacebar
+    e.preventDefault();
     jump();
   }
 });
@@ -76,7 +142,7 @@ document.addEventListener("keydown", (e) => {
 startBtn.addEventListener("click", () => {
   startScreen.classList.add("hidden");
   gameScreen.classList.remove("hidden");
-  resetPlayer();
+  resetGame();
   isRunning = true;
   requestAnimationFrame(gameLoop);
 });
@@ -102,18 +168,49 @@ function drawGround() {
 function drawPlayer() {
   ctx.fillStyle = "#ffcc00";
   ctx.fillRect(player.x, player.y, player.width, player.height);
-
-  // Simple face so it doesn't look like a random box
   ctx.fillStyle = "#1a1a2e";
-  ctx.fillRect(player.x + 26, player.y + 10, 6, 6); // eye
+  ctx.fillRect(player.x + 26, player.y + 10, 6, 6);
+}
+
+function drawObstacles() {
+  ctx.fillStyle = "#e94560";
+  for (const obstacle of obstacles) {
+    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+  }
+}
+
+function drawGameOver() {
+  ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+  ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 40px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("GAME OVER", GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10);
+
+  ctx.font = "16px sans-serif";
+  ctx.fillText("Press Start to try again", GAME_WIDTH / 2, GAME_HEIGHT / 2 + 25);
+  ctx.textAlign = "left"; // reset for future drawing
 }
 
 // ---- The Game Loop ----
 function gameLoop() {
-  if (!isRunning) return;
+  if (!isRunning) {
+    if (isGameOver) {
+      // Draw one final frame showing the game-over overlay
+      drawBackground();
+      drawGround();
+      drawObstacles();
+      drawPlayer();
+      drawGameOver();
+    }
+    return;
+  }
 
   // 1. Update game state
   updatePlayer();
+  updateObstacles();
+  checkAllCollisions();
 
   // 2. Clear canvas
   ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -121,6 +218,7 @@ function gameLoop() {
   // 3. Draw everything, back to front
   drawBackground();
   drawGround();
+  drawObstacles();
   drawPlayer();
 
   // 4. Next frame
