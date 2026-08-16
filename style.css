@@ -155,3 +155,13 @@ body:has(#game-screen:not(.hidden)) {
   color: #555;
   font-style: italic;
 }
+#game-area {
+  padding: 0;
+  overflow: hidden;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
