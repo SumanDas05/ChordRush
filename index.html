@@ -8,10 +8,48 @@
 </head>
 <body>
 
+  <!-- START SCREEN -->
   <div id="start-screen">
-    <h1>CHORD RUSH 🎸</h1>
+    <h1>CHORD RUNNER 🎸</h1>
     <p class="subtitle">An endless runner powered by real guitar chords</p>
     <button id="start-btn">Start Game</button>
+  </div>
+
+  <!-- GAME SCREEN (hidden until Start is clicked, later) -->
+  <div id="game-screen" class="hidden">
+
+    <!-- TOP HUD: score, combo, lives -->
+    <div id="hud">
+      <div class="hud-item">
+        <span class="hud-label">SCORE</span>
+        <span id="score" class="hud-value">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">COMBO</span>
+        <span id="combo" class="hud-value">x0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">LIVES</span>
+        <span id="lives" class="hud-value">❤️❤️❤️</span>
+      </div>
+      <button id="pause-btn">⏸ Pause</button>
+    </div>
+
+    <!-- CHORD PANEL: current chord + diagram -->
+    <div id="chord-panel">
+      <p class="play-label">PLAY THIS CHORD</p>
+      <h2 id="chord-name">C MAJOR</h2>
+      <div id="chord-diagram">
+        <!-- Chord diagram will be drawn here in Step 8 -->
+        <p class="placeholder-text">[Chord Diagram]</p>
+      </div>
+    </div>
+
+    <!-- GAME AREA: where the canvas will go -->
+    <div id="game-area">
+      <p class="placeholder-text">[Game Canvas will render here]</p>
+    </div>
+
   </div>
 
   <script src="script.js"></script>
