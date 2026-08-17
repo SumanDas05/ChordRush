@@ -165,3 +165,42 @@ body:has(#game-screen:not(.hidden)) {
   width: 100%;
   height: 100%;
 }
+/* ===== GAME OVER OVERLAY ===== */
+#gameover-screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+#gameover-screen h2 {
+  font-size: 2.5rem;
+  color: #e94560;
+  margin-bottom: 6px;
+}
+
+#gameover-screen p {
+  color: #ddd;
+  font-size: 1.1rem;
+}
+
+#restart-btn {
+  margin-top: 16px;
+  padding: 12px 28px;
+  font-size: 1rem;
+  font-weight: bold;
+  background: #1db954;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#restart-btn:hover {
+  background: #17a34a;
+}

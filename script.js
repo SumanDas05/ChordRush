@@ -1,9 +1,18 @@
-// Chord Runner - Step 5: Obstacles
+// Chord Runner - Step 6: Score and Game System
 
 // ---- Screen elements ----
 const startScreen = document.getElementById("start-screen");
 const gameScreen = document.getElementById("game-screen");
 const startBtn = document.getElementById("start-btn");
+const gameoverScreen = document.getElementById("gameover-screen");
+const restartBtn = document.getElementById("restart-btn");
+
+// ---- HUD elements ----
+const scoreEl = document.getElementById("score");
+const comboEl = document.getElementById("combo");
+const livesEl = document.getElementById("lives");
+const finalScoreEl = document.getElementById("final-score");
+const finalHighscoreEl = document.getElementById("final-highscore");
 
 // ---- Canvas setup ----
 const canvas = document.getElementById("game-canvas");
@@ -13,15 +22,21 @@ const GAME_WIDTH = canvas.width;
 const GAME_HEIGHT = canvas.height;
 const GROUND_Y = GAME_HEIGHT - 50;
 
-let isRunning = false;
-let isGameOver = false;
+// ---- Game state ----
+// Using a single string instead of scattered booleans keeps state changes explicit.
+let gameState = "start"; // "start" | "playing" | "gameover"
 
 // ---- Physics constants ----
 const GRAVITY = 0.6;
 const JUMP_FORCE = -12.5;
+const WORLD_SPEED = 5;
+const STARTING_LIVES = 3;
 
-// ---- World scroll speed ----
-const WORLD_SPEED = 5; // how fast obstacles move toward the player each frame
+// ---- Score / lives / combo ----
+let score = 0;
+let combo = 0;
+let lives = STARTING_LIVES;
+let highScore = Number(localStorage.getItem("chordRunnerHighScore")) || 0;
 
 // ---- Player object ----
 const player = {
@@ -66,22 +81,21 @@ let framesSinceLastSpawn = 0;
 let framesUntilNextSpawn = randomSpawnGap();
 
 function randomSpawnGap() {
-  // Random number of frames between spawns (roughly 1.3 to 2.3 seconds at 60fps)
   return Math.floor(Math.random() * 60) + 80;
 }
 
 function spawnObstacle() {
-  const size = 30 + Math.random() * 20; // vary size a bit: 30-50px
+  const size = 30 + Math.random() * 20;
   obstacles.push({
     x: GAME_WIDTH + size,
     y: GROUND_Y - size,
     width: size,
-    height: size
+    height: size,
+    passed: false // tracks whether we've already scored this obstacle
   });
 }
 
 function updateObstacles() {
-  // Spawn timer
   framesSinceLastSpawn++;
   if (framesSinceLastSpawn >= framesUntilNextSpawn) {
     spawnObstacle();
@@ -89,16 +103,47 @@ function updateObstacles() {
     framesUntilNextSpawn = randomSpawnGap();
   }
 
-  // Move obstacles left, remove ones that go off-screen
   for (let i = obstacles.length - 1; i >= 0; i--) {
-    obstacles[i].x -= WORLD_SPEED;
-    if (obstacles[i].x + obstacles[i].width < 0) {
+    const obstacle = obstacles[i];
+    obstacle.x -= WORLD_SPEED;
+
+    // Award score the moment the obstacle passes behind the player
+    if (!obstacle.passed && obstacle.x + obstacle.width < player.x) {
+      obstacle.passed = true;
+      addScore(10);
+    }
+
+    if (obstacle.x + obstacle.width < 0) {
       obstacles.splice(i, 1);
     }
   }
 }
 
-// ---- Collision detection (simple AABB - axis-aligned bounding box) ----
+// ---- Score / combo / lives helpers ----
+function addScore(points) {
+  combo++;
+  const comboBonus = Math.floor(combo / 5) * 5; // small bonus every 5-combo
+  score += points + comboBonus;
+  updateHUD();
+}
+
+function loseLife() {
+  lives--;
+  combo = 0; // getting hit resets your combo
+  updateHUD();
+
+  if (lives <= 0) {
+    triggerGameOver();
+  }
+}
+
+function updateHUD() {
+  scoreEl.textContent = score;
+  comboEl.textContent = `x${combo}`;
+  livesEl.textContent = "❤️".repeat(Math.max(lives, 0)) + "🖤".repeat(STARTING_LIVES - Math.max(lives, 0));
+}
+
+// ---- Collision detection ----
 function checkCollision(a, b) {
   return (
     a.x < b.x + b.width &&
@@ -109,43 +154,58 @@ function checkCollision(a, b) {
 }
 
 function checkAllCollisions() {
-  for (const obstacle of obstacles) {
-    if (checkCollision(player, obstacle)) {
-      triggerGameOver();
-      break;
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    if (checkCollision(player, obstacles[i])) {
+      obstacles.splice(i, 1); // remove the obstacle so it can't hit twice
+      loseLife();
     }
   }
 }
 
+// ---- Game state transitions ----
 function triggerGameOver() {
-  isGameOver = true;
-  isRunning = false;
+  gameState = "gameover";
+
+  if (score > highScore) {
+    highScore = score;
+    localStorage.setItem("chordRunnerHighScore", highScore);
+  }
+
+  finalScoreEl.textContent = score;
+  finalHighscoreEl.textContent = highScore;
+  gameoverScreen.classList.remove("hidden");
 }
 
-function resetGame() {
+function startGame() {
+  // Reset everything
   obstacles = [];
   framesSinceLastSpawn = 0;
   framesUntilNextSpawn = randomSpawnGap();
-  isGameOver = false;
+  score = 0;
+  combo = 0;
+  lives = STARTING_LIVES;
   resetPlayer();
+  updateHUD();
+
+  gameoverScreen.classList.add("hidden");
+  startScreen.classList.add("hidden");
+  gameScreen.classList.remove("hidden");
+
+  gameState = "playing";
+  requestAnimationFrame(gameLoop);
 }
 
 // ---- Keyboard controls (TEMPORARY - Spacebar for testing only) ----
 document.addEventListener("keydown", (e) => {
-  if (e.code === "Space" && isRunning) {
+  if (e.code === "Space" && gameState === "playing") {
     e.preventDefault();
     jump();
   }
 });
 
-// ---- Start button wiring ----
-startBtn.addEventListener("click", () => {
-  startScreen.classList.add("hidden");
-  gameScreen.classList.remove("hidden");
-  resetGame();
-  isRunning = true;
-  requestAnimationFrame(gameLoop);
-});
+// ---- Button wiring ----
+startBtn.addEventListener("click", startGame);
+restartBtn.addEventListener("click", startGame);
 
 // ---- Drawing functions ----
 function drawBackground() {
@@ -179,48 +239,19 @@ function drawObstacles() {
   }
 }
 
-function drawGameOver() {
-  ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-  ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 40px sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("GAME OVER", GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10);
-
-  ctx.font = "16px sans-serif";
-  ctx.fillText("Press Start to try again", GAME_WIDTH / 2, GAME_HEIGHT / 2 + 25);
-  ctx.textAlign = "left"; // reset for future drawing
-}
-
 // ---- The Game Loop ----
 function gameLoop() {
-  if (!isRunning) {
-    if (isGameOver) {
-      // Draw one final frame showing the game-over overlay
-      drawBackground();
-      drawGround();
-      drawObstacles();
-      drawPlayer();
-      drawGameOver();
-    }
-    return;
-  }
+  if (gameState !== "playing") return;
 
-  // 1. Update game state
   updatePlayer();
   updateObstacles();
   checkAllCollisions();
 
-  // 2. Clear canvas
   ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-  // 3. Draw everything, back to front
   drawBackground();
   drawGround();
   drawObstacles();
   drawPlayer();
 
-  // 4. Next frame
   requestAnimationFrame(gameLoop);
 }
