@@ -1,4 +1,4 @@
-// Chord Runner - Step 6: Score and Game System
+// Chord Runner - Step 7: Guitar Chord Database
 
 // ---- Screen elements ----
 const startScreen = document.getElementById("start-screen");
@@ -14,6 +14,9 @@ const livesEl = document.getElementById("lives");
 const finalScoreEl = document.getElementById("final-score");
 const finalHighscoreEl = document.getElementById("final-highscore");
 
+// ---- Chord panel elements ----
+const chordNameEl = document.getElementById("chord-name");
+
 // ---- Canvas setup ----
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
@@ -23,7 +26,6 @@ const GAME_HEIGHT = canvas.height;
 const GROUND_Y = GAME_HEIGHT - 50;
 
 // ---- Game state ----
-// Using a single string instead of scattered booleans keeps state changes explicit.
 let gameState = "start"; // "start" | "playing" | "gameover"
 
 // ---- Physics constants ----
@@ -37,6 +39,14 @@ let score = 0;
 let combo = 0;
 let lives = STARTING_LIVES;
 let highScore = Number(localStorage.getItem("chordRunnerHighScore")) || 0;
+
+// ---- Current chord (from chords.js) ----
+let currentChord = null;
+
+function setNewChord() {
+  currentChord = pickRandomChord();
+  chordNameEl.textContent = currentChord.name.toUpperCase();
+}
 
 // ---- Player object ----
 const player = {
@@ -91,7 +101,7 @@ function spawnObstacle() {
     y: GROUND_Y - size,
     width: size,
     height: size,
-    passed: false // tracks whether we've already scored this obstacle
+    passed: false
   });
 }
 
@@ -107,10 +117,10 @@ function updateObstacles() {
     const obstacle = obstacles[i];
     obstacle.x -= WORLD_SPEED;
 
-    // Award score the moment the obstacle passes behind the player
     if (!obstacle.passed && obstacle.x + obstacle.width < player.x) {
       obstacle.passed = true;
       addScore(10);
+      setNewChord();
     }
 
     if (obstacle.x + obstacle.width < 0) {
@@ -122,14 +132,14 @@ function updateObstacles() {
 // ---- Score / combo / lives helpers ----
 function addScore(points) {
   combo++;
-  const comboBonus = Math.floor(combo / 5) * 5; // small bonus every 5-combo
+  const comboBonus = Math.floor(combo / 5) * 5;
   score += points + comboBonus;
   updateHUD();
 }
 
 function loseLife() {
   lives--;
-  combo = 0; // getting hit resets your combo
+  combo = 0;
   updateHUD();
 
   if (lives <= 0) {
@@ -156,7 +166,7 @@ function checkCollision(a, b) {
 function checkAllCollisions() {
   for (let i = obstacles.length - 1; i >= 0; i--) {
     if (checkCollision(player, obstacles[i])) {
-      obstacles.splice(i, 1); // remove the obstacle so it can't hit twice
+      obstacles.splice(i, 1);
       loseLife();
     }
   }
@@ -177,7 +187,6 @@ function triggerGameOver() {
 }
 
 function startGame() {
-  // Reset everything
   obstacles = [];
   framesSinceLastSpawn = 0;
   framesUntilNextSpawn = randomSpawnGap();
@@ -185,6 +194,7 @@ function startGame() {
   combo = 0;
   lives = STARTING_LIVES;
   resetPlayer();
+  setNewChord();
   updateHUD();
 
   gameoverScreen.classList.add("hidden");
