@@ -1,4 +1,4 @@
-// Chord Runner - Step 7: Guitar Chord Database
+// Chord Runner - Step 9: Temporary Chord Gameplay
 
 // ---- Screen elements ----
 const startScreen = document.getElementById("start-screen");
@@ -16,6 +16,7 @@ const finalHighscoreEl = document.getElementById("final-highscore");
 
 // ---- Chord panel elements ----
 const chordNameEl = document.getElementById("chord-name");
+const chordFeedbackEl = document.getElementById("chord-feedback");
 
 // ---- Canvas setup ----
 const canvas = document.getElementById("game-canvas");
@@ -26,7 +27,7 @@ const GAME_HEIGHT = canvas.height;
 const GROUND_Y = GAME_HEIGHT - 50;
 
 // ---- Game state ----
-let gameState = "start"; // "start" | "playing" | "gameover"
+let gameState = "start"; // "start" | "playing" | "paused" | "gameover"
 
 // ---- Physics constants ----
 const GRAVITY = 0.6;
@@ -47,6 +48,8 @@ function setNewChord() {
   currentChord = pickRandomChord();
   chordNameEl.textContent = currentChord.name.toUpperCase();
   drawChordDiagram(currentChord);
+  chordFeedbackEl.textContent = "";
+  chordFeedbackEl.className = "";
 }
 
 // ---- Player object ----
@@ -118,15 +121,33 @@ function updateObstacles() {
     const obstacle = obstacles[i];
     obstacle.x -= WORLD_SPEED;
 
+    // Note: scoring no longer happens automatically here.
+    // It now happens in handleChordAttempt() when the player succeeds.
     if (!obstacle.passed && obstacle.x + obstacle.width < player.x) {
       obstacle.passed = true;
-      addScore(10);
-      setNewChord();
     }
 
     if (obstacle.x + obstacle.width < 0) {
       obstacles.splice(i, 1);
     }
+  }
+}
+
+// ---- Chord attempt handling (Spacebar = temporary simulated "correct chord") ----
+function handleChordAttempt(isCorrect) {
+  if (isCorrect) {
+    jump();
+    addScore(10);
+    chordFeedbackEl.textContent = `${currentChord.name} ✓`;
+    chordFeedbackEl.className = "correct";
+    // Give a brief moment before swapping to the next chord,
+    // so the player actually sees the feedback.
+    setTimeout(() => {
+      if (gameState === "playing") setNewChord();
+    }, 400);
+  } else {
+    chordFeedbackEl.textContent = `${currentChord.name} ✗`;
+    chordFeedbackEl.className = "wrong";
   }
 }
 
@@ -206,35 +227,30 @@ function startGame() {
   requestAnimationFrame(gameLoop);
 }
 
-// ---- Keyboard controls (TEMPORARY - Spacebar for testing only) ----
+// ---- Keyboard controls ----
+// TEMPORARY: Spacebar simulates "correct chord played" until Step 10-13 add real mic input.
 document.addEventListener("keydown", (e) => {
   if (e.code === "Space" && gameState === "playing") {
     e.preventDefault();
-    jump();
+    handleChordAttempt(true); // simulate success
   }
   if (e.code === "KeyP" && (gameState === "playing" || gameState === "paused")) {
-    pauseBtn.click(); // reuse the same pause/resume logic
+    pauseBtn.click();
   }
 });
 
 // ---- Button wiring ----
-
 startBtn.addEventListener("click", startGame);
 restartBtn.addEventListener("click", startGame);
 
 const pauseBtn = document.getElementById("pause-btn");
-let isPaused = false;
 
 pauseBtn.addEventListener("click", () => {
-  if (gameState !== "playing" && gameState !== "paused") return;
-
   if (gameState === "playing") {
     gameState = "paused";
-    isPaused = true;
     pauseBtn.textContent = "▶ Resume";
-  } else {
+  } else if (gameState === "paused") {
     gameState = "playing";
-    isPaused = false;
     pauseBtn.textContent = "⏸ Pause";
     requestAnimationFrame(gameLoop);
   }
@@ -274,7 +290,7 @@ function drawObstacles() {
 
 // ---- The Game Loop ----
 function gameLoop() {
-  if (gameState !== "playing") return; // stops the loop entirely when paused or gameover
+  if (gameState !== "playing") return;
 
   updatePlayer();
   updateObstacles();

@@ -208,3 +208,18 @@ body:has(#game-screen:not(.hidden)) {
 #restart-btn:hover {
   background: #17a34a;
 }
+/* ===== CHORD FEEDBACK ===== */
+#chord-feedback {
+  margin-top: 10px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  height: 24px; /* reserves space so layout doesn't jump when text appears/disappears */
+}
+
+#chord-feedback.correct {
+  color: #1db954;
+}
+
+#chord-feedback.wrong {
+  color: #e94560;
+}
