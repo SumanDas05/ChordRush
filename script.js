@@ -212,11 +212,33 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     jump();
   }
+  if (e.code === "KeyP" && (gameState === "playing" || gameState === "paused")) {
+    pauseBtn.click(); // reuse the same pause/resume logic
+  }
 });
 
 // ---- Button wiring ----
+
 startBtn.addEventListener("click", startGame);
 restartBtn.addEventListener("click", startGame);
+
+const pauseBtn = document.getElementById("pause-btn");
+let isPaused = false;
+
+pauseBtn.addEventListener("click", () => {
+  if (gameState !== "playing" && gameState !== "paused") return;
+
+  if (gameState === "playing") {
+    gameState = "paused";
+    isPaused = true;
+    pauseBtn.textContent = "▶ Resume";
+  } else {
+    gameState = "playing";
+    isPaused = false;
+    pauseBtn.textContent = "⏸ Pause";
+    requestAnimationFrame(gameLoop);
+  }
+});
 
 // ---- Drawing functions ----
 function drawBackground() {
@@ -252,7 +274,7 @@ function drawObstacles() {
 
 // ---- The Game Loop ----
 function gameLoop() {
-  if (gameState !== "playing") return;
+  if (gameState !== "playing") return; // stops the loop entirely when paused or gameover
 
   updatePlayer();
   updateObstacles();
