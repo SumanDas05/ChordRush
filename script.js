@@ -46,6 +46,7 @@ let currentChord = null;
 function setNewChord() {
   currentChord = pickRandomChord();
   chordNameEl.textContent = currentChord.name.toUpperCase();
+  drawChordDiagram(currentChord);
 }
 
 // ---- Player object ----

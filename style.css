@@ -138,8 +138,14 @@ body:has(#game-screen:not(.hidden)) {
   background: #161616;
   border-radius: 8px;
   border: 1px dashed #333;
+  overflow: hidden;
 }
 
+#chord-diagram svg {
+  width: 160px;
+  height: 120px;
+  display: block;
+}
 /* ===== GAME AREA (canvas placeholder) ===== */
 #game-area {
   height: 350px;
@@ -166,18 +172,16 @@ body:has(#game-screen:not(.hidden)) {
   height: 100%;
 }
 /* ===== GAME OVER OVERLAY ===== */
-#gameover-screen {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
+#game-screen {
+  width: 100%;
+  max-width: 1200px;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  z-index: 10;
+  gap: 16px;
+  padding: 20px;
+  box-sizing: border-box;
 }
-
 #gameover-screen h2 {
   font-size: 2.5rem;
   color: #e94560;
