@@ -223,3 +223,67 @@ body:has(#game-screen:not(.hidden)) {
 #chord-feedback.wrong {
   color: #e94560;
 }
+/* ===== MICROPHONE PANEL ===== */
+#mic-panel {
+  background: #1e1e1e;
+  border-radius: 10px;
+  border: 1px solid #2a2a2a;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+#mic-btn {
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  background: #2a2a2a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+#mic-btn:hover {
+  background: #3a3a3a;
+}
+
+#mic-btn.connected {
+  background: #1db954;
+}
+
+#mic-btn:disabled {
+  cursor: default;
+  opacity: 0.8;
+}
+
+#mic-status {
+  font-size: 0.9rem;
+  color: #888;
+}
+
+#mic-status.connected {
+  color: #1db954;
+}
+
+#mic-status.denied {
+  color: #e94560;
+}
+/* ===== PITCH DEBUG PANEL ===== */
+#pitch-debug {
+  background: #161616;
+  border-radius: 10px;
+  border: 1px solid #2a2a2a;
+  padding: 12px 20px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #1db954;
+  display: flex;
+  gap: 24px;
+}
+
+#pitch-debug p {
+  margin: 0;
+}

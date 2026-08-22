@@ -34,6 +34,7 @@
       </div>
       <button id="pause-btn">⏸ Pause</button>
     </div>
+       <!-- CHORD PANEL: current chord + diagram -->
     <!-- CHORD PANEL: current chord + diagram -->
     <div id="chord-panel">
       <p class="play-label">PLAY THIS CHORD</p>
@@ -43,7 +44,18 @@
       </div>
       <p id="chord-feedback"></p>
     </div>
+    <!-- MICROPHONE PANEL -->
+    <div id="mic-panel">
+      <button id="mic-btn">🎤 Enable Microphone</button>
+      <p id="mic-status">Microphone not connected</p>
+    </div>
 
+    <!-- PITCH DEBUG PANEL -->
+    <div id="pitch-debug">
+      <p>Frequency: <span id="debug-frequency">--</span> Hz</p>
+      <p>Detected Note: <span id="debug-note">--</span></p>
+      <p>Confidence: <span id="debug-confidence">--</span></p>
+    </div>
     <!-- GAME AREA: canvas lives here -->
     <div id="game-area">
       <canvas id="game-canvas" width="860" height="350"></canvas>
@@ -61,6 +73,7 @@
 
    <script src="chord.js"></script>
   <script src="chordDiagram.js"></script>
+  <script src="audio.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
