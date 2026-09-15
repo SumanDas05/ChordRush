@@ -302,3 +302,16 @@ body:has(#game-screen:not(.hidden)) {
 #debug-mode-toggle {
   cursor: pointer;
 }
+/* ===== TIMING FEEDBACK ===== */
+#chord-feedback.perfect {
+  color: #ffd700;
+  font-size: 1.3rem;
+}
+
+#chord-feedback.good {
+  color: #1db954;
+}
+
+#chord-feedback.miss {
+  color: #e94560;
+}

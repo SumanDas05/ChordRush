@@ -1,4 +1,4 @@
-// Chord Runner - Step 13: Real Guitar Controls the Character (tuned for easier pacing)
+// Chord Runner - Step 14: Timing System
 
 // ---- Screen elements ----
 const startScreen = document.getElementById("start-screen");
@@ -35,8 +35,13 @@ let gameState = "start"; // "start" | "playing" | "paused" | "gameover"
 // ---- Physics constants ----
 const GRAVITY = 0.6;
 const JUMP_FORCE = -12.5;
-const WORLD_SPEED = 2.2;      // slowed down from 5 for easier chord timing
+const WORLD_SPEED = 2.2;
 const STARTING_LIVES = 3;
+
+// ---- Timing windows (distance in pixels from player when chord is played) ----
+// Smaller distance = obstacle is closer = tighter/better timing.
+const PERFECT_DISTANCE = 180; // within this distance from the player = PERFECT
+const GOOD_DISTANCE = 400;    // within this distance = GOOD; beyond it = still counted, but no bonus
 
 // ---- Score / lives / combo ----
 let score = 0;
@@ -98,7 +103,6 @@ let framesSinceLastSpawn = 0;
 let framesUntilNextSpawn = randomSpawnGap();
 
 function randomSpawnGap() {
-  // Widened from 80-140 to 180-260 frames (~3-4.3s at 60fps) for more breathing room
   return Math.floor(Math.random() * 80) + 180;
 }
 
@@ -135,21 +139,63 @@ function updateObstacles() {
   }
 }
 
+// ---- Finds the nearest obstacle still approaching the player (not yet passed) ----
+function getNearestUpcomingObstacle() {
+  let nearest = null;
+  let nearestDistance = Infinity;
+
+  for (const obstacle of obstacles) {
+    if (obstacle.passed) continue; // already behind the player, irrelevant for timing
+    const distance = obstacle.x - player.x;
+    if (distance >= 0 && distance < nearestDistance) {
+      nearestDistance = distance;
+      nearest = obstacle;
+    }
+  }
+
+  return { obstacle: nearest, distance: nearestDistance };
+}
+
 // ---- Chord attempt handling ----
 // Called either by Debug Mode (Spacebar) or by real guitar detection (audio.js).
 function handleChordAttempt(isCorrect) {
-  if (isCorrect) {
-    jump();
-    addScore(10);
-    chordFeedbackEl.textContent = `${currentChord.name} ✓ PERFECT!`;
-    chordFeedbackEl.className = "correct";
-    setTimeout(() => {
-      if (gameState === "playing") setNewChord();
-    }, 400);
-  } else {
+  if (!isCorrect) {
     chordFeedbackEl.textContent = `${currentChord.name} ✗ WRONG CHORD`;
     chordFeedbackEl.className = "wrong";
+    return;
   }
+
+  jump();
+
+  // Determine timing quality based on distance to the nearest upcoming obstacle
+  const { distance } = getNearestUpcomingObstacle();
+
+  let timingLabel, points, feedbackClass;
+
+  if (distance <= PERFECT_DISTANCE) {
+    timingLabel = "PERFECT!";
+    points = 100;
+    feedbackClass = "perfect";
+  } else if (distance <= GOOD_DISTANCE) {
+    timingLabel = "GOOD";
+    points = 50;
+    feedbackClass = "good";
+  } else {
+    // Correct chord, but played well before any obstacle was actually close.
+    // Still rewarded a little so early/careful players aren't punished for correctness,
+    // but much less than well-timed play.
+    timingLabel = "EARLY";
+    points = 10;
+    feedbackClass = "good";
+  }
+
+  addScore(points);
+  chordFeedbackEl.textContent = `${currentChord.name} ✓ ${timingLabel}`;
+  chordFeedbackEl.className = feedbackClass;
+
+  setTimeout(() => {
+    if (gameState === "playing") setNewChord();
+  }, 400);
 }
 
 // ---- Function audio.js checks before sampling (avoids wasted work) ----
@@ -234,11 +280,10 @@ function startGame() {
 }
 
 // ---- Keyboard controls ----
-// Spacebar now ONLY works when Debug Mode is checked.
 document.addEventListener("keydown", (e) => {
   if (e.code === "Space" && gameState === "playing" && debugModeToggle.checked) {
     e.preventDefault();
-    handleChordAttempt(true); // Debug Mode: simulate success
+    handleChordAttempt(true);
   }
   if (e.code === "KeyP" && (gameState === "playing" || gameState === "paused")) {
     pauseBtn.click();
@@ -263,8 +308,6 @@ pauseBtn.addEventListener("click", () => {
 });
 
 // ---- Connect real chord detection to gameplay ----
-// audio.js calls this every time it detects a correct chord match
-// while shouldListenForChords() is true.
 onChordDetected = function (result) {
   if (gameState === "playing") {
     handleChordAttempt(true);
