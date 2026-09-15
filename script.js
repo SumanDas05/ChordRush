@@ -1,4 +1,4 @@
-// Chord Runner - Step 9: Temporary Chord Gameplay
+// Chord Runner - Step 13: Real Guitar Controls the Character
 
 // ---- Screen elements ----
 const startScreen = document.getElementById("start-screen");
@@ -17,6 +17,9 @@ const finalHighscoreEl = document.getElementById("final-highscore");
 // ---- Chord panel elements ----
 const chordNameEl = document.getElementById("chord-name");
 const chordFeedbackEl = document.getElementById("chord-feedback");
+
+// ---- Debug mode toggle ----
+const debugModeToggle = document.getElementById("debug-mode-toggle");
 
 // ---- Canvas setup ----
 const canvas = document.getElementById("game-canvas");
@@ -121,8 +124,6 @@ function updateObstacles() {
     const obstacle = obstacles[i];
     obstacle.x -= WORLD_SPEED;
 
-    // Note: scoring no longer happens automatically here.
-    // It now happens in handleChordAttempt() when the player succeeds.
     if (!obstacle.passed && obstacle.x + obstacle.width < player.x) {
       obstacle.passed = true;
     }
@@ -133,22 +134,26 @@ function updateObstacles() {
   }
 }
 
-// ---- Chord attempt handling (Spacebar = temporary simulated "correct chord") ----
+// ---- Chord attempt handling ----
+// Called either by Debug Mode (Spacebar) or by real guitar detection (audio.js).
 function handleChordAttempt(isCorrect) {
   if (isCorrect) {
     jump();
     addScore(10);
-    chordFeedbackEl.textContent = `${currentChord.name} ✓`;
+    chordFeedbackEl.textContent = `${currentChord.name} ✓ PERFECT!`;
     chordFeedbackEl.className = "correct";
-    // Give a brief moment before swapping to the next chord,
-    // so the player actually sees the feedback.
     setTimeout(() => {
       if (gameState === "playing") setNewChord();
     }, 400);
   } else {
-    chordFeedbackEl.textContent = `${currentChord.name} ✗`;
+    chordFeedbackEl.textContent = `${currentChord.name} ✗ WRONG CHORD`;
     chordFeedbackEl.className = "wrong";
   }
+}
+
+// ---- Function audio.js checks before sampling (avoids wasted work) ----
+function shouldListenForChords() {
+  return gameState === "playing" && !debugModeToggle.checked;
 }
 
 // ---- Score / combo / lives helpers ----
@@ -228,11 +233,11 @@ function startGame() {
 }
 
 // ---- Keyboard controls ----
-// TEMPORARY: Spacebar simulates "correct chord played" until Step 10-13 add real mic input.
+// Spacebar now ONLY works when Debug Mode is checked.
 document.addEventListener("keydown", (e) => {
-  if (e.code === "Space" && gameState === "playing") {
+  if (e.code === "Space" && gameState === "playing" && debugModeToggle.checked) {
     e.preventDefault();
-    handleChordAttempt(true); // simulate success
+    handleChordAttempt(true); // Debug Mode: simulate success
   }
   if (e.code === "KeyP" && (gameState === "playing" || gameState === "paused")) {
     pauseBtn.click();
@@ -255,6 +260,15 @@ pauseBtn.addEventListener("click", () => {
     requestAnimationFrame(gameLoop);
   }
 });
+
+// ---- Connect real chord detection to gameplay ----
+// audio.js calls this every time it detects a correct chord match
+// while shouldListenForChords() is true.
+onChordDetected = function (result) {
+  if (gameState === "playing") {
+    handleChordAttempt(true);
+  }
+};
 
 // ---- Drawing functions ----
 function drawBackground() {
