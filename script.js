@@ -1,4 +1,4 @@
-// Chord Runner - Step 13: Real Guitar Controls the Character
+// Chord Runner - Step 13: Real Guitar Controls the Character (tuned for easier pacing)
 
 // ---- Screen elements ----
 const startScreen = document.getElementById("start-screen");
@@ -35,7 +35,7 @@ let gameState = "start"; // "start" | "playing" | "paused" | "gameover"
 // ---- Physics constants ----
 const GRAVITY = 0.6;
 const JUMP_FORCE = -12.5;
-const WORLD_SPEED = 5;
+const WORLD_SPEED = 2.2;      // slowed down from 5 for easier chord timing
 const STARTING_LIVES = 3;
 
 // ---- Score / lives / combo ----
@@ -98,7 +98,8 @@ let framesSinceLastSpawn = 0;
 let framesUntilNextSpawn = randomSpawnGap();
 
 function randomSpawnGap() {
-  return Math.floor(Math.random() * 60) + 80;
+  // Widened from 80-140 to 180-260 frames (~3-4.3s at 60fps) for more breathing room
+  return Math.floor(Math.random() * 80) + 180;
 }
 
 function spawnObstacle() {
