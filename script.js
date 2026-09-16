@@ -1,4 +1,4 @@
-// Chord Runner - Step 14: Timing System
+// Chord Runner - Fix: Guaranteed-clear jump mechanism
 
 // ---- Screen elements ----
 const startScreen = document.getElementById("start-screen");
@@ -38,10 +38,23 @@ const JUMP_FORCE = -12.5;
 const WORLD_SPEED = 2.2;
 const STARTING_LIVES = 3;
 
-// ---- Timing windows (distance in pixels from player when chord is played) ----
-// Smaller distance = obstacle is closer = tighter/better timing.
-const PERFECT_DISTANCE = 180; // within this distance from the player = PERFECT
-const GOOD_DISTANCE = 400;    // within this distance = GOOD; beyond it = still counted, but no bonus
+// ---- Timing windows (used only for SCORING - based on distance when you strum) ----
+const PERFECT_DISTANCE = 180;
+const GOOD_DISTANCE = 400;
+
+// ---- NEW: Jump queue system ----
+// Instead of jumping the instant a chord is confirmed correct, we "queue" the
+// jump. The game then fires the real jump automatically once the nearest
+// obstacle reaches a safe, pre-tuned distance - guaranteeing it's cleared,
+// regardless of exactly when you strummed.
+let jumpQueued = false;
+const JUMP_TRIGGER_DISTANCE = 150; // obstacle distance at which a queued jump auto-fires
+
+// Extra safety net: brief invulnerability during the jump arc, so even if
+// obstacle sizing/speed changes later (Step 15 difficulty levels), a queued
+// jump can never result in an unfair hit.
+let isInvulnerable = false;
+const INVULNERABILITY_DURATION_MS = 900;
 
 // ---- Score / lives / combo ----
 let score = 0;
@@ -145,7 +158,7 @@ function getNearestUpcomingObstacle() {
   let nearestDistance = Infinity;
 
   for (const obstacle of obstacles) {
-    if (obstacle.passed) continue; // already behind the player, irrelevant for timing
+    if (obstacle.passed) continue;
     const distance = obstacle.x - player.x;
     if (distance >= 0 && distance < nearestDistance) {
       nearestDistance = distance;
@@ -154,6 +167,31 @@ function getNearestUpcomingObstacle() {
   }
 
   return { obstacle: nearest, distance: nearestDistance };
+}
+
+// ---- NEW: Jump queue processing ----
+// Called every frame. If a jump is queued, fire it the moment the nearest
+// obstacle reaches the safe trigger distance (or immediately if there's
+// nothing to time against, or it's already closer than that distance).
+function updateJumpQueue() {
+  if (!jumpQueued) return;
+
+  const { obstacle, distance } = getNearestUpcomingObstacle();
+
+  if (!obstacle || distance <= JUMP_TRIGGER_DISTANCE) {
+    executeQueuedJump();
+  }
+}
+
+function executeQueuedJump() {
+  jumpQueued = false;
+  jump();
+
+  // Safety net: ignore collisions for the duration of this jump arc
+  isInvulnerable = true;
+  setTimeout(() => {
+    isInvulnerable = false;
+  }, INVULNERABILITY_DURATION_MS);
 }
 
 // ---- Chord attempt handling ----
@@ -165,14 +203,18 @@ function handleChordAttempt(isCorrect) {
     return;
   }
 
-  jump();
-
-  // Determine timing quality based on distance to the nearest upcoming obstacle
+  // Score based on how close the obstacle was WHEN YOU STRUMMED
+  // (this still rewards good timing/awareness, even though the actual
+  // jump is deferred to a guaranteed-safe moment).
   const { distance } = getNearestUpcomingObstacle();
 
   let timingLabel, points, feedbackClass;
 
-  if (distance <= PERFECT_DISTANCE) {
+  if (distance === Infinity) {
+    timingLabel = "EARLY";
+    points = 10;
+    feedbackClass = "good";
+  } else if (distance <= PERFECT_DISTANCE) {
     timingLabel = "PERFECT!";
     points = 100;
     feedbackClass = "perfect";
@@ -181,9 +223,6 @@ function handleChordAttempt(isCorrect) {
     points = 50;
     feedbackClass = "good";
   } else {
-    // Correct chord, but played well before any obstacle was actually close.
-    // Still rewarded a little so early/careful players aren't punished for correctness,
-    // but much less than well-timed play.
     timingLabel = "EARLY";
     points = 10;
     feedbackClass = "good";
@@ -192,6 +231,10 @@ function handleChordAttempt(isCorrect) {
   addScore(points);
   chordFeedbackEl.textContent = `${currentChord.name} ✓ ${timingLabel}`;
   chordFeedbackEl.className = feedbackClass;
+
+  // Queue the jump instead of firing it immediately - it will execute
+  // automatically once the obstacle reaches a safe, guaranteed-clear distance.
+  jumpQueued = true;
 
   setTimeout(() => {
     if (gameState === "playing") setNewChord();
@@ -238,6 +281,8 @@ function checkCollision(a, b) {
 }
 
 function checkAllCollisions() {
+  if (isInvulnerable) return; // mid-queued-jump: never register a hit
+
   for (let i = obstacles.length - 1; i >= 0; i--) {
     if (checkCollision(player, obstacles[i])) {
       obstacles.splice(i, 1);
@@ -267,6 +312,8 @@ function startGame() {
   score = 0;
   combo = 0;
   lives = STARTING_LIVES;
+  jumpQueued = false;
+  isInvulnerable = false;
   resetPlayer();
   setNewChord();
   updateHUD();
@@ -333,7 +380,7 @@ function drawGround() {
 }
 
 function drawPlayer() {
-  ctx.fillStyle = "#ffcc00";
+  ctx.fillStyle = isInvulnerable ? "#ffffff" : "#ffcc00"; // brief visual cue while safe-jumping
   ctx.fillRect(player.x, player.y, player.width, player.height);
   ctx.fillStyle = "#1a1a2e";
   ctx.fillRect(player.x + 26, player.y + 10, 6, 6);
@@ -352,6 +399,7 @@ function gameLoop() {
 
   updatePlayer();
   updateObstacles();
+  updateJumpQueue();   // NEW: fires any queued jump at the safe moment
   checkAllCollisions();
 
   ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
