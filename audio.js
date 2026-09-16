@@ -156,7 +156,7 @@ function frequencyToNote(frequency) {
 }
 
 // ---- Continuous single-note detection ----
-const CONFIDENCE_THRESHOLD = 0.9;
+const CONFIDENCE_THRESHOLD = 0.85; // slightly more lenient — was too strict for some notes
 
 function detectPitchLoop() {
   if (!isMicConnected || !analyser) return;
@@ -212,7 +212,10 @@ function matchChord(detectedNotesSet, targetChord) {
 
   const unexpectedNotes = [...detectedNotesSet].filter(n => !targetNotes.includes(n));
 
-  const isMatch = matchedCount >= 2 && unexpectedNotes.length <= 1;
+  // Loosened: full 6-string chords (like G, Em, E) naturally produce more
+  // harmonic "noise" than partially-muted chords (like C, A), so we allow
+  // more unexpected notes before rejecting a match.
+  const isMatch = matchedCount >= 2 && unexpectedNotes.length <= 3;
   const matchPercent = Math.round((matchedCount / targetNotes.length) * 100);
 
   return { isMatch, matchedCount, matchPercent, unexpectedNotes };
