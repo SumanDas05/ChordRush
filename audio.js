@@ -184,7 +184,7 @@ function detectPitchLoop() {
 }
 
 // ---- Chord sampling window ----
-const CHORD_SAMPLE_DURATION_MS = 450;
+const CHORD_SAMPLE_DURATION_MS = 1600; // more time to strum comfortably
 
 let isSamplingChord = false;
 let collectedNotes = new Set();

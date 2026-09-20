@@ -33,14 +33,14 @@ const GROUND_Y = GAME_HEIGHT - 50;
 let gameState = "start"; // "start" | "playing" | "paused" | "gameover"
 
 // ---- Physics constants ----
-const GRAVITY = 0.6;
-const JUMP_FORCE = -12.5;
-const WORLD_SPEED = 2.2;
+const GRAVITY = 0.55;
+const JUMP_FORCE = -12;
+const WORLD_SPEED = 1.4;      // slower still — was 2.2
 const STARTING_LIVES = 3;
 
 // ---- Timing windows (used only for SCORING - based on distance when you strum) ----
-const PERFECT_DISTANCE = 180;
-const GOOD_DISTANCE = 400;
+const PERFECT_DISTANCE = 220; // widened so PERFECT is easier to land at this slower pace
+const GOOD_DISTANCE = 500;
 
 // ---- NEW: Jump queue system ----
 // Instead of jumping the instant a chord is confirmed correct, we "queue" the
@@ -48,8 +48,7 @@ const GOOD_DISTANCE = 400;
 // obstacle reaches a safe, pre-tuned distance - guaranteeing it's cleared,
 // regardless of exactly when you strummed.
 let jumpQueued = false;
-const JUMP_TRIGGER_DISTANCE = 150; // obstacle distance at which a queued jump auto-fires
-
+const JUMP_TRIGGER_DISTANCE = 95; // scaled down to match the slower WORLD_SPEED, so the jump still fires with the same real-world timing margin
 // Extra safety net: brief invulnerability during the jump arc, so even if
 // obstacle sizing/speed changes later (Step 15 difficulty levels), a queued
 // jump can never result in an unfair hit.
@@ -116,7 +115,9 @@ let framesSinceLastSpawn = 0;
 let framesUntilNextSpawn = randomSpawnGap();
 
 function randomSpawnGap() {
-  return Math.floor(Math.random() * 80) + 180;
+  // Roughly 4.5-6.5 seconds between obstacles at 60fps — plenty of time
+  // to find your chord shape, strum, and reset before the next one.
+  return Math.floor(Math.random() * 120) + 270;
 }
 
 function spawnObstacle() {
