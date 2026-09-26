@@ -12,9 +12,18 @@
   <div id="start-screen">
     <h1>CHORD RUNNER 🎸</h1>
     <p class="subtitle">An endless runner powered by real guitar chords</p>
+
+    <div id="difficulty-selector">
+      <p class="difficulty-label">SELECT DIFFICULTY</p>
+      <div id="difficulty-buttons">
+        <button class="difficulty-btn selected" data-level="beginner">Beginner</button>
+        <button class="difficulty-btn" data-level="intermediate">Intermediate</button>
+        <button class="difficulty-btn" data-level="advanced">Advanced</button>
+      </div>
+    </div>
+
     <button id="start-btn">Start Game</button>
   </div>
-
   <!-- GAME SCREEN (hidden until Start is clicked) -->
   <div id="game-screen" class="hidden">
 

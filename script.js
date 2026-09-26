@@ -32,15 +32,16 @@ const GROUND_Y = GAME_HEIGHT - 50;
 // ---- Game state ----
 let gameState = "start"; // "start" | "playing" | "paused" | "gameover"
 
-// ---- Physics constants ----
 const GRAVITY = 0.55;
 const JUMP_FORCE = -12;
-const WORLD_SPEED = 1.4;      // slower still — was 2.2
 const STARTING_LIVES = 3;
 
-// ---- Timing windows (used only for SCORING - based on distance when you strum) ----
-const PERFECT_DISTANCE = 220; // widened so PERFECT is easier to land at this slower pace
-const GOOD_DISTANCE = 500;
+// ---- Difficulty-dependent values (set by applyDifficulty() in chords.js) ----
+// These now have defaults but are overwritten based on the player's selection.
+let WORLD_SPEED = 1.2;
+let PERFECT_DISTANCE = 260;
+let GOOD_DISTANCE = 550;
+let selectedDifficulty = "beginner";
 
 // ---- NEW: Jump queue system ----
 // Instead of jumping the instant a chord is confirmed correct, we "queue" the
@@ -48,7 +49,7 @@ const GOOD_DISTANCE = 500;
 // obstacle reaches a safe, pre-tuned distance - guaranteeing it's cleared,
 // regardless of exactly when you strummed.
 let jumpQueued = false;
-const JUMP_TRIGGER_DISTANCE = 95; // scaled down to match the slower WORLD_SPEED, so the jump still fires with the same real-world timing margin
+let JUMP_TRIGGER_DISTANCE = 80; // recalculated per-difficulty in applySelectedDifficulty()
 // Extra safety net: brief invulnerability during the jump arc, so even if
 // obstacle sizing/speed changes later (Step 15 difficulty levels), a queued
 // jump can never result in an unfair hit.
@@ -307,6 +308,8 @@ function triggerGameOver() {
 }
 
 function startGame() {
+  applySelectedDifficulty(); // NEW: lock in chord pool + speed + timing for this run
+
   obstacles = [];
   framesSinceLastSpawn = 0;
   framesUntilNextSpawn = randomSpawnGap();
@@ -337,6 +340,28 @@ document.addEventListener("keydown", (e) => {
     pauseBtn.click();
   }
 });
+
+// ---- Difficulty selection (start screen) ----
+const difficultyButtons = document.querySelectorAll(".difficulty-btn");
+
+difficultyButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    difficultyButtons.forEach((b) => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    selectedDifficulty = btn.dataset.level;
+  });
+});
+
+function applySelectedDifficulty() {
+  const preset = applyDifficulty(selectedDifficulty); // from chords.js
+  WORLD_SPEED = preset.worldSpeed;
+  PERFECT_DISTANCE = preset.perfectDistance;
+  GOOD_DISTANCE = preset.goodDistance;
+
+  // Scale JUMP_TRIGGER_DISTANCE with WORLD_SPEED, same ratio we tuned before
+  // (roughly distance/speed stays proportional so real-world timing feels consistent)
+  JUMP_TRIGGER_DISTANCE = Math.round(WORLD_SPEED * 68);
+}
 
 // ---- Button wiring ----
 startBtn.addEventListener("click", startGame);
