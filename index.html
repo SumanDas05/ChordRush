@@ -75,12 +75,18 @@
     <div id="game-area">
       <canvas id="game-canvas" width="860" height="350"></canvas>
     </div>
-
     <!-- GAME OVER OVERLAY -->
     <div id="gameover-screen" class="hidden">
       <h2>GAME OVER</h2>
       <p>Score: <span id="final-score">0</span></p>
       <p>High Score: <span id="final-highscore">0</span></p>
+      <p>Highest Combo: <span id="final-combo">x0</span></p>
+      <p>Accuracy: <span id="final-accuracy">0%</span></p>
+      <p class="stat-breakdown">
+        ✓ <span id="final-correct">0</span> &nbsp;
+        ✗ <span id="final-wrong">0</span> &nbsp;
+        ⏱ <span id="final-missed">0</span>
+      </p>
       <button id="restart-btn">Restart</button>
     </div>
 

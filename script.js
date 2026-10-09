@@ -13,7 +13,11 @@ const comboEl = document.getElementById("combo");
 const livesEl = document.getElementById("lives");
 const finalScoreEl = document.getElementById("final-score");
 const finalHighscoreEl = document.getElementById("final-highscore");
-
+const finalComboEl = document.getElementById("final-combo");
+const finalAccuracyEl = document.getElementById("final-accuracy");
+const finalCorrectEl = document.getElementById("final-correct");
+const finalWrongEl = document.getElementById("final-wrong");
+const finalMissedEl = document.getElementById("final-missed");
 // ---- Chord panel elements ----
 const chordNameEl = document.getElementById("chord-name");
 const chordFeedbackEl = document.getElementById("chord-feedback");
@@ -59,9 +63,14 @@ const INVULNERABILITY_DURATION_MS = 900;
 // ---- Score / lives / combo ----
 let score = 0;
 let combo = 0;
+let highestCombo = 0;
 let lives = STARTING_LIVES;
 let highScore = Number(localStorage.getItem("chordRunnerHighScore")) || 0;
 
+// ---- Accuracy tracking ----
+let correctCount = 0;
+let wrongCount = 0;
+let missedCount = 0; // chord never attempted before its obstacle passed (Step 17+ ready, unused directly yet)
 // ---- Current chord (from chords.js) ----
 let currentChord = null;
 
@@ -200,10 +209,13 @@ function executeQueuedJump() {
 // Called either by Debug Mode (Spacebar) or by real guitar detection (audio.js).
 function handleChordAttempt(isCorrect) {
   if (!isCorrect) {
+    wrongCount++;
     chordFeedbackEl.textContent = `${currentChord.name} ✗ WRONG CHORD`;
     chordFeedbackEl.className = "wrong";
     return;
   }
+
+  correctCount++;
 
   // Score based on how close the obstacle was WHEN YOU STRUMMED
   // (this still rewards good timing/awareness, even though the actual
@@ -249,10 +261,17 @@ function shouldListenForChords() {
 }
 
 // ---- Score / combo / lives helpers ----
+// Multiplier grows with combo: x1 base, +0.1 per combo point, capped at x3.
+function getComboMultiplier() {
+  return Math.min(1 + combo * 0.1, 3);
+}
+
 function addScore(points) {
   combo++;
-  const comboBonus = Math.floor(combo / 5) * 5;
-  score += points + comboBonus;
+  if (combo > highestCombo) highestCombo = combo;
+
+  const multiplier = getComboMultiplier();
+  score += Math.round(points * multiplier);
   updateHUD();
 }
 
@@ -264,6 +283,12 @@ function loseLife() {
   if (lives <= 0) {
     triggerGameOver();
   }
+}
+
+function calculateAccuracy() {
+  const totalAttempts = correctCount + wrongCount;
+  if (totalAttempts === 0) return 100; // no attempts yet = show 100%, not misleading 0%
+  return Math.round((correctCount / totalAttempts) * 100);
 }
 
 function updateHUD() {
@@ -304,17 +329,25 @@ function triggerGameOver() {
 
   finalScoreEl.textContent = score;
   finalHighscoreEl.textContent = highScore;
+  finalComboEl.textContent = `x${highestCombo}`;
+  finalAccuracyEl.textContent = `${calculateAccuracy()}%`;
+  finalCorrectEl.textContent = correctCount;
+  finalWrongEl.textContent = wrongCount;
+  finalMissedEl.textContent = missedCount;
   gameoverScreen.classList.remove("hidden");
 }
-
 function startGame() {
-  applySelectedDifficulty(); // NEW: lock in chord pool + speed + timing for this run
+  applySelectedDifficulty();
 
   obstacles = [];
   framesSinceLastSpawn = 0;
   framesUntilNextSpawn = randomSpawnGap();
   score = 0;
   combo = 0;
+  highestCombo = 0;
+  correctCount = 0;
+  wrongCount = 0;
+  missedCount = 0;
   lives = STARTING_LIVES;
   jumpQueued = false;
   isInvulnerable = false;

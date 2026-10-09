@@ -373,3 +373,9 @@ body:has(#game-screen:not(.hidden)) {
   color: #121212;
   border-color: #1db954;
 }
+/* ===== GAME OVER STAT BREAKDOWN ===== */
+.stat-breakdown {
+  font-size: 0.85rem;
+  color: #999;
+  margin-top: 6px;
+}
