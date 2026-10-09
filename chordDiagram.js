@@ -21,7 +21,7 @@ const NECK_BOTTOM = NECK_TOP + 80;
 const STRING_GAP = (NECK_RIGHT - NECK_LEFT) / (STRING_COUNT - 1);
 const FRET_GAP = (NECK_BOTTOM - NECK_TOP) / FRET_COUNT;
 
-function drawChordDiagram(chord) {
+function drawChordDiagram(chord, targetEl = chordDiagramEl) {
   const parts = [];
 
   parts.push(`<svg viewBox="0 0 ${DIAGRAM_WIDTH} ${DIAGRAM_HEIGHT}" xmlns="http://www.w3.org/2000/svg">`);
@@ -67,5 +67,5 @@ function drawChordDiagram(chord) {
 
   parts.push(`</svg>`);
 
-  chordDiagramEl.innerHTML = parts.join("");
+  targetEl.innerHTML = parts.join("");
 }

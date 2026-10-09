@@ -22,7 +22,8 @@
       </div>
     </div>
 
-    <button id="start-btn">Start Game</button>
+      <button id="start-btn">Start Game</button>
+    <button id="practice-btn">🎸 Practice Mode</button>
   </div>
   <!-- GAME SCREEN (hidden until Start is clicked) -->
   <div id="game-screen" class="hidden">
@@ -91,10 +92,37 @@
     </div>
 
   </div>
+    <!-- PRACTICE SCREEN -->
+  <div id="practice-screen" class="hidden">
+    <div id="practice-header">
+      <button id="practice-back-btn">← Back</button>
+      <h2>🎸 Practice Mode</h2>
+    </div>
+
+    <p class="play-label">CHOOSE A CHORD</p>
+    <div id="practice-chord-buttons"></div>
+
+    <div id="practice-main">
+      <h2 id="practice-chord-name">Select a chord</h2>
+      <div id="practice-diagram"></div>
+
+      <div id="practice-notes"></div>
+
+      <p id="practice-accuracy"></p>
+      <p id="practice-feedback"></p>
+
+      <div id="practice-controls">
+        <button id="practice-mic-btn">🎤 Enable Microphone</button>
+        <button id="practice-listen-btn" disabled>▶ Start Listening</button>
+      </div>
+      <p id="practice-mic-status">Microphone not connected</p>
+    </div>
+  </div>
 
    <script src="chord.js"></script>
   <script src="chordDiagram.js"></script>
   <script src="audio.js"></script>
   <script src="script.js"></script>
+  <script src="practice.js"></script>
 </body>
 </html>

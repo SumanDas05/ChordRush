@@ -379,3 +379,199 @@ body:has(#game-screen:not(.hidden)) {
   color: #999;
   margin-top: 6px;
 }
+/* ===== PRACTICE MODE ===== */
+#practice-btn {
+  display: block;
+  margin: 14px auto 0;
+  padding: 12px 28px;
+  font-size: 1rem;
+  font-weight: bold;
+  background: #1e1e1e;
+  color: #fff;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+#practice-btn:hover {
+  border-color: #1db954;
+}
+
+#practice-screen {
+  width: 100%;
+  max-width: 900px;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: 20px;
+  text-align: center;
+}
+
+#practice-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+#practice-back-btn {
+  padding: 8px 16px;
+  background: #2a2a2a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#practice-back-btn:hover {
+  background: #3a3a3a;
+}
+
+#practice-chord-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 8px 0 20px;
+}
+
+.practice-chord-btn {
+  padding: 8px 14px;
+  background: #1e1e1e;
+  color: #aaa;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.15s ease;
+}
+
+.practice-chord-btn:hover {
+  border-color: #1db954;
+  color: #fff;
+}
+
+.practice-chord-btn.selected {
+  background: #1db954;
+  color: #121212;
+  border-color: #1db954;
+}
+
+#practice-main {
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+#practice-chord-name {
+  color: #1db954;
+  font-size: 2rem;
+  margin-bottom: 12px;
+}
+
+#practice-diagram {
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #161616;
+  border-radius: 8px;
+  border: 1px dashed #333;
+  overflow: hidden;
+}
+
+#practice-diagram svg {
+  width: 160px;
+  height: 120px;
+  display: block;
+}
+
+#practice-notes {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  margin: 18px 0 8px;
+  font-size: 1.4rem;
+  font-weight: bold;
+  min-height: 34px;
+}
+
+.practice-note {
+  color: #666;
+}
+
+.practice-note.heard {
+  color: #1db954;
+}
+
+.practice-note.missing {
+  color: #e94560;
+}
+
+#practice-accuracy {
+  font-size: 1.1rem;
+  color: #ddd;
+  min-height: 26px;
+}
+
+#practice-feedback {
+  font-size: 1.3rem;
+  font-weight: bold;
+  min-height: 32px;
+  color: #888;
+}
+
+#practice-feedback.excellent {
+  color: #ffd700;
+}
+
+#practice-feedback.good {
+  color: #1db954;
+}
+
+#practice-feedback.retry {
+  color: #e94560;
+}
+
+#practice-controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+#practice-mic-btn,
+#practice-listen-btn {
+  padding: 10px 20px;
+  font-weight: bold;
+  background: #2a2a2a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#practice-mic-btn:hover,
+#practice-listen-btn:hover:not(:disabled) {
+  background: #3a3a3a;
+}
+
+#practice-mic-btn.connected {
+  background: #1db954;
+}
+
+#practice-listen-btn.active {
+  background: #e94560;
+}
+
+#practice-listen-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#practice-mic-status {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: #888;
+}
