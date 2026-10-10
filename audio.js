@@ -1,4 +1,4 @@
-// Chord Runner - Step 13: Real Guitar Controls the Character
+// Chord Runner - Microphone, pitch detection, chord recognition
 
 const micBtn = document.getElementById("mic-btn");
 const micStatusEl = document.getElementById("mic-status");
@@ -40,6 +40,7 @@ async function enableMicrophone() {
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 2048;
 
+    // Mic -> analyser only. Never connect to destination (feedback loop!)
     sourceNode.connect(analyser);
 
     timeDomainData = new Float32Array(analyser.fftSize);
@@ -53,7 +54,7 @@ async function enableMicrophone() {
     micStatusEl.className = "connected";
 
     detectPitchLoop();
-    startContinuousChordListening(); // NEW: begin listening for chord matches immediately
+    startContinuousChordListening();
 
   } catch (error) {
     isMicConnected = false;
@@ -75,10 +76,11 @@ async function enableMicrophone() {
 
 micBtn.addEventListener("click", enableMicrophone);
 
-// ---- Autocorrelation pitch detection (unchanged) ----
+// ---- Autocorrelation pitch detection ----
 function autoCorrelate(buffer, sampleRate) {
   const SIZE = buffer.length;
 
+  // 1. Silence check (RMS = loudness)
   let rms = 0;
   for (let i = 0; i < SIZE; i++) {
     rms += buffer[i] * buffer[i];
@@ -89,6 +91,7 @@ function autoCorrelate(buffer, sampleRate) {
     return { frequency: -1, confidence: 0 };
   }
 
+  // 2. Trim near-silent edges
   let start = 0;
   let end = SIZE - 1;
   const threshold = 0.02;
@@ -101,6 +104,7 @@ function autoCorrelate(buffer, sampleRate) {
     return { frequency: -1, confidence: 0 };
   }
 
+  // 3. Autocorrelation
   const maxLag = Math.floor(trimmedSize / 2);
   const correlations = new Array(maxLag).fill(0);
 
@@ -112,6 +116,7 @@ function autoCorrelate(buffer, sampleRate) {
     correlations[lag] = sum;
   }
 
+  // 4. Best peak within the guitar range (~70-1000 Hz)
   const minLag = Math.floor(sampleRate / 1000);
   const searchMaxLag = Math.min(maxLag, Math.floor(sampleRate / 70));
 
@@ -129,6 +134,7 @@ function autoCorrelate(buffer, sampleRate) {
     return { frequency: -1, confidence: 0 };
   }
 
+  // 5. Parabolic interpolation for sub-sample accuracy
   const y1 = correlations[bestLag - 1] || correlations[bestLag];
   const y2 = correlations[bestLag];
   const y3 = correlations[bestLag + 1] || correlations[bestLag];
@@ -144,6 +150,7 @@ function autoCorrelate(buffer, sampleRate) {
   return { frequency, confidence };
 }
 
+// ---- Frequency -> note name ----
 function frequencyToNote(frequency) {
   if (frequency <= 0) return null;
 
@@ -155,8 +162,8 @@ function frequencyToNote(frequency) {
   return NOTE_NAMES[noteIndex];
 }
 
-// ---- Continuous single-note detection ----
-const CONFIDENCE_THRESHOLD = 0.85; // slightly more lenient — was too strict for some notes
+// ---- Continuous single-note detection (drives the debug display) ----
+const CONFIDENCE_THRESHOLD = 0.85;
 
 function detectPitchLoop() {
   if (!isMicConnected || !analyser) return;
@@ -184,7 +191,7 @@ function detectPitchLoop() {
 }
 
 // ---- Chord sampling window ----
-const CHORD_SAMPLE_DURATION_MS = 1600; // more time to strum comfortably
+const CHORD_SAMPLE_DURATION_MS = 1600;
 
 let isSamplingChord = false;
 let collectedNotes = new Set();
@@ -201,7 +208,7 @@ function sampleChordWindow() {
   });
 }
 
-// ---- Chord matching ----
+// ---- Chord matching (tolerant of noise and harmonics) ----
 function matchChord(detectedNotesSet, targetChord) {
   const targetNotes = targetChord.notes;
 
@@ -212,9 +219,6 @@ function matchChord(detectedNotesSet, targetChord) {
 
   const unexpectedNotes = [...detectedNotesSet].filter(n => !targetNotes.includes(n));
 
-  // Loosened: full 6-string chords (like G, Em, E) naturally produce more
-  // harmonic "noise" than partially-muted chords (like C, A), so we allow
-  // more unexpected notes before rejecting a match.
   const isMatch = matchedCount >= 2 && unexpectedNotes.length <= 3;
   const matchPercent = Math.round((matchedCount / targetNotes.length) * 100);
 
@@ -234,15 +238,12 @@ async function detectChordAttempt(targetChord) {
   return result;
 }
 
-// ---- NEW: Continuous chord-listening loop ----
-// While the mic is connected AND the game is actively playing (and not in
-// debug mode), this repeatedly samples chord windows back-to-back and
-// reports successes up to script.js via onChordDetected (set by script.js).
-let onChordDetected = null; // script.js will assign this callback
+// ---- Continuous chord-listening loop (used by the game) ----
+// script.js assigns onChordDetected and defines shouldListenForChords().
+let onChordDetected = null;
 
 async function startContinuousChordListening() {
   while (isMicConnected) {
-    // Only actually sample if the game wants us to (playing, not debug mode, not paused)
     if (typeof shouldListenForChords === "function" && shouldListenForChords() && typeof currentChord !== "undefined" && currentChord) {
       debugChordMatchEl.textContent = "Listening...";
       const result = await detectChordAttempt(currentChord);
@@ -251,8 +252,6 @@ async function startContinuousChordListening() {
         onChordDetected(result);
       }
     } else {
-      // Not actively needed right now - wait a bit before checking again,
-      // so we're not burning CPU sampling for nothing (e.g. on the start screen).
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
   }

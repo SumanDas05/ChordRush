@@ -1,4 +1,8 @@
-// Chord Runner - Step 15: Difficulty System
+// Chord Runner - Chord database + difficulty presets
+//
+// frets:   fret per string in order [E, A, D, G, B, E] (low to high)
+//          "x" = muted, 0 = open, number = fret to press
+// fingers: finger number per string (0 = none)
 
 const chords = {
   C: {
@@ -70,8 +74,6 @@ const chords = {
 };
 
 // ---- Difficulty presets ----
-// Each level controls: which chords appear, how fast obstacles move,
-// and how forgiving the PERFECT/GOOD timing windows are.
 const DIFFICULTY_PRESETS = {
   beginner: {
     label: "Beginner",
@@ -96,7 +98,7 @@ const DIFFICULTY_PRESETS = {
   }
 };
 
-let activeChordKeys = DIFFICULTY_PRESETS.beginner.chordKeys; // default until a level is chosen
+let activeChordKeys = DIFFICULTY_PRESETS.beginner.chordKeys;
 let lastChordKey = null;
 
 function pickRandomChord() {
@@ -109,7 +111,7 @@ function pickRandomChord() {
   return chords[key];
 }
 
-// Called from script.js when the player picks a difficulty level
+// Called from script.js when a game starts
 function applyDifficulty(levelKey) {
   const preset = DIFFICULTY_PRESETS[levelKey];
   activeChordKeys = preset.chordKeys;

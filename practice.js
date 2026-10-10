@@ -1,6 +1,4 @@
-// Chord Runner - Step 17: Practice Mode
-//
-// Lets the player pick any chord, strum it, and see which notes were heard.
+// Chord Runner - Practice Mode
 // Reuses sampleChordWindow(), matchChord(), enableMicrophone() and
 // isMicConnected from audio.js, and drawChordDiagram() from chordDiagram.js.
 
@@ -35,7 +33,7 @@ function buildPracticeChordButtons() {
   }
 }
 
-// ---- Show the target notes, each marked heard / missing / not-yet-tested ----
+// ---- Show target notes, each marked heard / missing / not-yet-tested ----
 function renderPracticeNotes(chord, heardSet) {
   practiceNotesEl.innerHTML = "";
 
@@ -58,7 +56,7 @@ function renderPracticeNotes(chord, heardSet) {
 }
 
 function selectPracticeChord(key) {
-  practiceListening = false; // stop any listening for the previous chord
+  practiceListening = false;
   updateListenButton();
 
   practiceChordKey = key;
@@ -95,15 +93,12 @@ practiceMicBtn.addEventListener("click", async () => {
   if (isMicConnected) {
     updatePracticeMicStatus();
   } else {
-    // audio.js already wrote a specific error message into #mic-status
     practiceMicStatusEl.textContent = document.getElementById("mic-status").textContent;
   }
 });
 
 // ---- Listen button ----
 function updateListenButton() {
-  // Listening needs a connected mic and a selected chord. It is also locked
-  // briefly while an old listening window is still finishing.
   practiceListenBtn.disabled = !isMicConnected || !practiceChordKey || (practiceLoopActive && !practiceListening);
   practiceListenBtn.textContent = practiceListening ? "■ Stop Listening" : "▶ Start Listening";
   practiceListenBtn.classList.toggle("active", practiceListening);
@@ -123,7 +118,7 @@ practiceListenBtn.addEventListener("click", () => {
   practiceLoop();
 });
 
-// ---- The listening loop: sample -> match -> show feedback -> repeat ----
+// ---- Listening loop: sample -> match -> show feedback -> repeat ----
 async function practiceLoop() {
   if (practiceLoopActive) return;
   practiceLoopActive = true;
@@ -136,7 +131,7 @@ async function practiceLoop() {
       practiceFeedbackEl.className = "";
 
       const heardNotes = await sampleChordWindow(); // from audio.js
-      if (!practiceListening) break; // player pressed stop or changed chord mid-window
+      if (!practiceListening) break;
 
       showPracticeResult(chord, heardNotes);
 

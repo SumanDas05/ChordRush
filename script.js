@@ -1,4 +1,5 @@
-// Chord Runner - Fix: Guaranteed-clear jump mechanism
+// Chord Runner - script.js (state after Step 18: Polish)
+// Depends on: chords.js, chordDiagram.js, audio.js, effects.js (loaded before this file)
 
 // ---- Screen elements ----
 const startScreen = document.getElementById("start-screen");
@@ -18,6 +19,7 @@ const finalAccuracyEl = document.getElementById("final-accuracy");
 const finalCorrectEl = document.getElementById("final-correct");
 const finalWrongEl = document.getElementById("final-wrong");
 const finalMissedEl = document.getElementById("final-missed");
+
 // ---- Chord panel elements ----
 const chordNameEl = document.getElementById("chord-name");
 const chordFeedbackEl = document.getElementById("chord-feedback");
@@ -36,27 +38,24 @@ const GROUND_Y = GAME_HEIGHT - 50;
 // ---- Game state ----
 let gameState = "start"; // "start" | "playing" | "paused" | "gameover"
 
+// ---- Physics constants ----
 const GRAVITY = 0.55;
 const JUMP_FORCE = -12;
 const STARTING_LIVES = 3;
 
-// ---- Difficulty-dependent values (set by applyDifficulty() in chords.js) ----
-// These now have defaults but are overwritten based on the player's selection.
+// ---- Difficulty-dependent values (overwritten by applySelectedDifficulty()) ----
 let WORLD_SPEED = 1.2;
 let PERFECT_DISTANCE = 260;
 let GOOD_DISTANCE = 550;
 let selectedDifficulty = "beginner";
 
-// ---- NEW: Jump queue system ----
-// Instead of jumping the instant a chord is confirmed correct, we "queue" the
-// jump. The game then fires the real jump automatically once the nearest
-// obstacle reaches a safe, pre-tuned distance - guaranteeing it's cleared,
-// regardless of exactly when you strummed.
+// ---- Jump queue system ----
+// A correct chord queues a jump, which fires automatically once the nearest
+// obstacle reaches a safe distance, so a correct chord always clears it.
 let jumpQueued = false;
-let JUMP_TRIGGER_DISTANCE = 80; // recalculated per-difficulty in applySelectedDifficulty()
-// Extra safety net: brief invulnerability during the jump arc, so even if
-// obstacle sizing/speed changes later (Step 15 difficulty levels), a queued
-// jump can never result in an unfair hit.
+let JUMP_TRIGGER_DISTANCE = 80; // recalculated per difficulty
+
+// Brief invulnerability during a queued jump (safety net against unfair hits)
 let isInvulnerable = false;
 const INVULNERABILITY_DURATION_MS = 900;
 
@@ -70,7 +69,8 @@ let highScore = Number(localStorage.getItem("chordRunnerHighScore")) || 0;
 // ---- Accuracy tracking ----
 let correctCount = 0;
 let wrongCount = 0;
-let missedCount = 0; // chord never attempted before its obstacle passed (Step 17+ ready, unused directly yet)
+let missedCount = 0; // not incremented yet (always 0 for now)
+
 // ---- Current chord (from chords.js) ----
 let currentChord = null;
 
@@ -80,6 +80,8 @@ function setNewChord() {
   drawChordDiagram(currentChord);
   chordFeedbackEl.textContent = "";
   chordFeedbackEl.className = "";
+  retriggerAnimation(chordNameEl, "chord-enter");
+  retriggerAnimation(chordDiagramEl, "chord-enter");
 }
 
 // ---- Player object ----
@@ -125,8 +127,7 @@ let framesSinceLastSpawn = 0;
 let framesUntilNextSpawn = randomSpawnGap();
 
 function randomSpawnGap() {
-  // Roughly 4.5-6.5 seconds between obstacles at 60fps — plenty of time
-  // to find your chord shape, strum, and reset before the next one.
+  // Roughly 4.5-6.5 seconds between obstacles at 60fps
   return Math.floor(Math.random() * 120) + 270;
 }
 
@@ -163,7 +164,7 @@ function updateObstacles() {
   }
 }
 
-// ---- Finds the nearest obstacle still approaching the player (not yet passed) ----
+// ---- Nearest obstacle still approaching the player ----
 function getNearestUpcomingObstacle() {
   let nearest = null;
   let nearestDistance = Infinity;
@@ -180,10 +181,7 @@ function getNearestUpcomingObstacle() {
   return { obstacle: nearest, distance: nearestDistance };
 }
 
-// ---- NEW: Jump queue processing ----
-// Called every frame. If a jump is queued, fire it the moment the nearest
-// obstacle reaches the safe trigger distance (or immediately if there's
-// nothing to time against, or it's already closer than that distance).
+// ---- Jump queue processing (runs every frame) ----
 function updateJumpQueue() {
   if (!jumpQueued) return;
 
@@ -198,7 +196,6 @@ function executeQueuedJump() {
   jumpQueued = false;
   jump();
 
-  // Safety net: ignore collisions for the duration of this jump arc
   isInvulnerable = true;
   setTimeout(() => {
     isInvulnerable = false;
@@ -206,20 +203,24 @@ function executeQueuedJump() {
 }
 
 // ---- Chord attempt handling ----
-// Called either by Debug Mode (Spacebar) or by real guitar detection (audio.js).
+// Called by Debug Mode (Spacebar / tap) or by real guitar detection (audio.js).
 function handleChordAttempt(isCorrect) {
+  const popupX = player.x + player.width / 2;
+  const popupY = player.y - 12;
+
   if (!isCorrect) {
     wrongCount++;
     chordFeedbackEl.textContent = `${currentChord.name} ✗ WRONG CHORD`;
     chordFeedbackEl.className = "wrong";
+    spawnPopup("✗", popupX, popupY, "#e94560");
+    triggerShake(6);
+    playSound("wrong");
     return;
   }
 
   correctCount++;
 
-  // Score based on how close the obstacle was WHEN YOU STRUMMED
-  // (this still rewards good timing/awareness, even though the actual
-  // jump is deferred to a guaranteed-safe moment).
+  // Timing quality is based on how close the obstacle was when you strummed
   const { distance } = getNearestUpcomingObstacle();
 
   let timingLabel, points, feedbackClass;
@@ -242,12 +243,28 @@ function handleChordAttempt(isCorrect) {
     feedbackClass = "good";
   }
 
+  const scoreBefore = score;
   addScore(points);
+  const gained = score - scoreBefore;
+
   chordFeedbackEl.textContent = `${currentChord.name} ✓ ${timingLabel}`;
   chordFeedbackEl.className = feedbackClass;
 
-  // Queue the jump instead of firing it immediately - it will execute
-  // automatically once the obstacle reaches a safe, guaranteed-clear distance.
+  // ---- Effects ----
+  const isPerfect = feedbackClass === "perfect";
+  spawnParticles(popupX, player.y + player.height / 2, isPerfect ? "#ffd700" : "#1db954", isPerfect ? 22 : 12);
+  spawnPopup(`${timingLabel.replace("!", "")} +${gained}`, popupX, popupY, isPerfect ? "#ffd700" : "#1db954");
+  playSound(isPerfect ? "perfect" : "good");
+  retriggerAnimation(comboEl, "combo-pulse");
+
+  // Combo milestone every 5 in a row
+  if (combo > 0 && combo % 5 === 0) {
+    spawnPopup(`COMBO x${combo}!`, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, "#ff9f1c");
+    spawnParticles(GAME_WIDTH / 2, GAME_HEIGHT / 2, "#ff9f1c", 30);
+    playSound("combo");
+  }
+
+  // Queue the jump (fires automatically at a safe distance)
   jumpQueued = true;
 
   setTimeout(() => {
@@ -255,13 +272,13 @@ function handleChordAttempt(isCorrect) {
   }, 400);
 }
 
-// ---- Function audio.js checks before sampling (avoids wasted work) ----
+// ---- audio.js checks this before sampling ----
 function shouldListenForChords() {
   return gameState === "playing" && !debugModeToggle.checked;
 }
 
 // ---- Score / combo / lives helpers ----
-// Multiplier grows with combo: x1 base, +0.1 per combo point, capped at x3.
+// Multiplier: x1 base, +0.1 per combo point, capped at x3
 function getComboMultiplier() {
   return Math.min(1 + combo * 0.1, 3);
 }
@@ -280,6 +297,12 @@ function loseLife() {
   combo = 0;
   updateHUD();
 
+  // Hit effects
+  triggerShake(14);
+  spawnParticles(player.x + player.width / 2, player.y + player.height / 2, "#e94560", 24);
+  spawnPopup("OUCH!", player.x + player.width / 2, player.y - 12, "#e94560");
+  playSound("hit");
+
   if (lives <= 0) {
     triggerGameOver();
   }
@@ -287,7 +310,7 @@ function loseLife() {
 
 function calculateAccuracy() {
   const totalAttempts = correctCount + wrongCount;
-  if (totalAttempts === 0) return 100; // no attempts yet = show 100%, not misleading 0%
+  if (totalAttempts === 0) return 100;
   return Math.round((correctCount / totalAttempts) * 100);
 }
 
@@ -308,7 +331,7 @@ function checkCollision(a, b) {
 }
 
 function checkAllCollisions() {
-  if (isInvulnerable) return; // mid-queued-jump: never register a hit
+  if (isInvulnerable) return;
 
   for (let i = obstacles.length - 1; i >= 0; i--) {
     if (checkCollision(player, obstacles[i])) {
@@ -327,6 +350,7 @@ function triggerGameOver() {
     localStorage.setItem("chordRunnerHighScore", highScore);
   }
 
+  playSound("gameover");
   finalScoreEl.textContent = score;
   finalHighscoreEl.textContent = highScore;
   finalComboEl.textContent = `x${highestCombo}`;
@@ -336,6 +360,7 @@ function triggerGameOver() {
   finalMissedEl.textContent = missedCount;
   gameoverScreen.classList.remove("hidden");
 }
+
 function startGame() {
   applySelectedDifficulty();
 
@@ -351,6 +376,7 @@ function startGame() {
   lives = STARTING_LIVES;
   jumpQueued = false;
   isInvulnerable = false;
+  resetEffects();
   resetPlayer();
   setNewChord();
   updateHUD();
@@ -364,6 +390,7 @@ function startGame() {
 }
 
 // ---- Keyboard controls ----
+// Spacebar only works when Debug Mode is checked.
 document.addEventListener("keydown", (e) => {
   if (e.code === "Space" && gameState === "playing" && debugModeToggle.checked) {
     e.preventDefault();
@@ -391,8 +418,7 @@ function applySelectedDifficulty() {
   PERFECT_DISTANCE = preset.perfectDistance;
   GOOD_DISTANCE = preset.goodDistance;
 
-  // Scale JUMP_TRIGGER_DISTANCE with WORLD_SPEED, same ratio we tuned before
-  // (roughly distance/speed stays proportional so real-world timing feels consistent)
+  // Keeps the jump's real-world timing margin consistent across speeds
   JUMP_TRIGGER_DISTANCE = Math.round(WORLD_SPEED * 68);
 }
 
@@ -420,52 +446,35 @@ onChordDetected = function (result) {
   }
 };
 
-// ---- Drawing functions ----
-function drawBackground() {
-  ctx.fillStyle = "#1a1a2e";
-  ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-}
-
-function drawGround() {
-  ctx.fillStyle = "#0f3d2e";
-  ctx.fillRect(0, GROUND_Y, GAME_WIDTH, GAME_HEIGHT - GROUND_Y);
-
-  ctx.strokeStyle = "#1db954";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, GROUND_Y);
-  ctx.lineTo(GAME_WIDTH, GROUND_Y);
-  ctx.stroke();
-}
-
-function drawPlayer() {
-  ctx.fillStyle = isInvulnerable ? "#ffffff" : "#ffcc00"; // brief visual cue while safe-jumping
-  ctx.fillRect(player.x, player.y, player.width, player.height);
-  ctx.fillStyle = "#1a1a2e";
-  ctx.fillRect(player.x + 26, player.y + 10, 6, 6);
-}
-
-function drawObstacles() {
-  ctx.fillStyle = "#e94560";
-  for (const obstacle of obstacles) {
-    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-  }
-}
-
 // ---- The Game Loop ----
 function gameLoop() {
   if (gameState !== "playing") return;
 
   updatePlayer();
   updateObstacles();
-  updateJumpQueue();   // NEW: fires any queued jump at the safe moment
+  updateJumpQueue();
   checkAllCollisions();
+  updateEffects();
 
   ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-  drawBackground();
-  drawGround();
-  drawObstacles();
-  drawPlayer();
+
+  ctx.save();
+  if (shakeFrames > 0) {
+    ctx.translate((Math.random() - 0.5) * shakeFrames, (Math.random() - 0.5) * shakeFrames);
+  }
+  renderBackground();
+  renderGround();
+  renderObstacles();
+  renderPlayer();
+  renderEffects();
+  ctx.restore();
 
   requestAnimationFrame(gameLoop);
 }
+
+// Debug Mode on touch devices: tap the game area instead of pressing Spacebar
+canvas.addEventListener("pointerdown", () => {
+  if (gameState === "playing" && debugModeToggle.checked) {
+    handleChordAttempt(true);
+  }
+});

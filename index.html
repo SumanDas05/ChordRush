@@ -22,9 +22,10 @@
       </div>
     </div>
 
-      <button id="start-btn">Start Game</button>
+    <button id="start-btn">Start Game</button>
     <button id="practice-btn">🎸 Practice Mode</button>
   </div>
+
   <!-- GAME SCREEN (hidden until Start is clicked) -->
   <div id="game-screen" class="hidden">
 
@@ -44,7 +45,7 @@
       </div>
       <button id="pause-btn">⏸ Pause</button>
     </div>
-       <!-- CHORD PANEL: current chord + diagram -->
+
     <!-- CHORD PANEL: current chord + diagram -->
     <div id="chord-panel">
       <p class="play-label">PLAY THIS CHORD</p>
@@ -54,17 +55,22 @@
       </div>
       <p id="chord-feedback"></p>
     </div>
+
     <!-- MICROPHONE PANEL -->
     <div id="mic-panel">
       <button id="mic-btn">🎤 Enable Microphone</button>
       <p id="mic-status">Microphone not connected</p>
+      <label id="sound-label">
+        <input type="checkbox" id="sound-toggle" />
+        🔊 Sound FX (use headphones)
+      </label>
       <label id="debug-mode-label">
         <input type="checkbox" id="debug-mode-toggle" />
         Debug Mode (Spacebar)
       </label>
     </div>
 
-      <!-- PITCH DEBUG PANEL -->
+    <!-- PITCH DEBUG PANEL -->
     <div id="pitch-debug">
       <p>Frequency: <span id="debug-frequency">--</span> Hz</p>
       <p>Detected Note: <span id="debug-note">--</span></p>
@@ -72,10 +78,12 @@
       <p>Notes Heard: <span id="debug-notes-heard">--</span></p>
       <p>Chord Match: <span id="debug-chord-match">--</span></p>
     </div>
+
     <!-- GAME AREA: canvas lives here -->
     <div id="game-area">
       <canvas id="game-canvas" width="860" height="350"></canvas>
     </div>
+
     <!-- GAME OVER OVERLAY -->
     <div id="gameover-screen" class="hidden">
       <h2>GAME OVER</h2>
@@ -92,7 +100,8 @@
     </div>
 
   </div>
-    <!-- PRACTICE SCREEN -->
+
+  <!-- PRACTICE SCREEN -->
   <div id="practice-screen" class="hidden">
     <div id="practice-header">
       <button id="practice-back-btn">← Back</button>
@@ -119,9 +128,10 @@
     </div>
   </div>
 
-   <script src="chord.js"></script>
+  <script src="chords.js"></script>
   <script src="chordDiagram.js"></script>
   <script src="audio.js"></script>
+  <script src="effects.js"></script>
   <script src="script.js"></script>
   <script src="practice.js"></script>
 </body>
