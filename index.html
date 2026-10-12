@@ -43,6 +43,7 @@
         <span class="hud-label">LIVES</span>
         <span id="lives" class="hud-value">❤️❤️❤️</span>
       </div>
+          <button id="debug-toggle-btn">🛠 Debug</button>
       <button id="pause-btn">⏸ Pause</button>
     </div>
 
@@ -70,13 +71,26 @@
       </label>
     </div>
 
-    <!-- PITCH DEBUG PANEL -->
-    <div id="pitch-debug">
+       <!-- DEBUG PANEL (hidden by default, toggled with the Debug button or D key) -->
+    <div id="pitch-debug" class="hidden">
+      <p class="dbg-title">🛠 DEBUG PANEL</p>
+
+      <p>MIC: <span id="debug-mic" class="dbg-bad">NOT CONNECTED</span></p>
+
+      <p class="dbg-section">PITCH (single note)</p>
       <p>Frequency: <span id="debug-frequency">--</span> Hz</p>
-      <p>Detected Note: <span id="debug-note">--</span></p>
+      <p>Note: <span id="debug-note">--</span></p>
       <p>Confidence: <span id="debug-confidence">--</span></p>
-      <p>Notes Heard: <span id="debug-notes-heard">--</span></p>
-      <p>Chord Match: <span id="debug-chord-match">--</span></p>
+
+      <p class="dbg-section">CHORD</p>
+      <p>Target: <span id="debug-target">--</span></p>
+      <p>Notes: <span id="debug-target-notes">--</span></p>
+      <p>Live Match: <span id="debug-live-match">--</span></p>
+      <p>Last Window: <span id="debug-notes-heard">--</span> &rarr; <span id="debug-chord-match">--</span></p>
+
+      <p class="dbg-section">GAME</p>
+      <p>Obstacle: <span id="debug-distance">--</span></p>
+      <p>State: <span id="debug-state">--</span></p>
     </div>
 
     <!-- GAME AREA: canvas lives here -->
@@ -134,5 +148,6 @@
   <script src="effects.js"></script>
   <script src="script.js"></script>
   <script src="practice.js"></script>
+  <script src="debug.js"></script>
 </body>
 </html>

@@ -314,7 +314,6 @@ body:has(#game-screen:not(.hidden)) {
 #pitch-debug p {
   margin: 0;
 }
-
 /* ===== GAME AREA (canvas) ===== */
 #game-area {
   flex: 1;
