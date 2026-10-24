@@ -1,4 +1,4 @@
-// Chord Runner - script.js (state after Step 18: Polish)
+// Chord Runner - script.js (commit 1: upgraded guitar detection hooks)
 // Depends on: chords.js, chordDiagram.js, audio.js, effects.js (loaded before this file)
 
 // ---- Screen elements ----
@@ -82,6 +82,7 @@ function setNewChord() {
   chordFeedbackEl.className = "";
   retriggerAnimation(chordNameEl, "chord-enter");
   retriggerAnimation(chordDiagramEl, "chord-enter");
+  resetChordHold(); // from audio.js: start listening fresh for the new chord
 }
 
 // ---- Player object ----
@@ -164,7 +165,8 @@ function updateObstacles() {
   }
 }
 
-// ---- Nearest obstacle still approaching the player ----
+// ---- Nearest obstacle that hasn't been passed yet ----
+// (distance can be negative if the obstacle is already overlapping the player)
 function getNearestUpcomingObstacle() {
   let nearest = null;
   let nearestDistance = Infinity;
@@ -172,7 +174,7 @@ function getNearestUpcomingObstacle() {
   for (const obstacle of obstacles) {
     if (obstacle.passed) continue;
     const distance = obstacle.x - player.x;
-    if (distance >= 0 && distance < nearestDistance) {
+    if (distance < nearestDistance) {
       nearestDistance = distance;
       nearest = obstacle;
     }
@@ -186,8 +188,9 @@ function updateJumpQueue() {
   if (!jumpQueued) return;
 
   const { obstacle, distance } = getNearestUpcomingObstacle();
+  if (!obstacle) return; // keep the jump ready until the next rock appears
 
-  if (!obstacle || distance <= JUMP_TRIGGER_DISTANCE) {
+  if (distance <= JUMP_TRIGGER_DISTANCE) {
     executeQueuedJump();
   }
 }
@@ -220,7 +223,7 @@ function handleChordAttempt(isCorrect) {
 
   correctCount++;
 
-  // Timing quality is based on how close the obstacle was when you strummed
+  // Timing quality is based on how close the obstacle was when you played the chord
   const { distance } = getNearestUpcomingObstacle();
 
   let timingLabel, points, feedbackClass;
@@ -272,7 +275,7 @@ function handleChordAttempt(isCorrect) {
   }, 400);
 }
 
-// ---- audio.js checks this before sampling ----
+// ---- audio.js checks this before listening ----
 function shouldListenForChords() {
   return gameState === "playing" && !debugModeToggle.checked;
 }
@@ -378,6 +381,7 @@ function startGame() {
   isInvulnerable = false;
   resetEffects();
   resetPlayer();
+  resetChordDetector(); // from audio.js
   setNewChord();
   updateHUD();
 
@@ -440,10 +444,12 @@ pauseBtn.addEventListener("click", () => {
 });
 
 // ---- Connect real chord detection to gameplay ----
-onChordDetected = function (result) {
-  if (gameState === "playing") {
-    handleChordAttempt(true);
-  }
+onChordDetected = function () {
+  if (gameState === "playing") handleChordAttempt(true);
+};
+
+onChordWrong = function () {
+  if (gameState === "playing") handleChordAttempt(false);
 };
 
 // ---- The Game Loop ----

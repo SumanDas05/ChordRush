@@ -59,7 +59,10 @@
 
     <!-- MICROPHONE PANEL -->
     <div id="mic-panel">
-      <button id="mic-btn">🎤 Enable Microphone</button>
+            <button id="mic-btn">🎤 Enable Microphone</button>
+      <div id="mic-level" title="Microphone level">
+        <div id="mic-level-fill"></div>
+      </div>
       <p id="mic-status">Microphone not connected</p>
       <label id="sound-label">
         <input type="checkbox" id="sound-toggle" />
@@ -72,21 +75,23 @@
     </div>
 
        <!-- DEBUG PANEL (hidden by default, toggled with the Debug button or D key) -->
-    <div id="pitch-debug" class="hidden">
+       <div id="pitch-debug" class="hidden">
       <p class="dbg-title">🛠 DEBUG PANEL</p>
 
       <p>MIC: <span id="debug-mic" class="dbg-bad">NOT CONNECTED</span></p>
+      <p>Level: <span id="debug-rms">--</span></p>
 
-      <p class="dbg-section">PITCH (single note)</p>
+      <p class="dbg-section">STRONGEST NOTE</p>
       <p>Frequency: <span id="debug-frequency">--</span> Hz</p>
       <p>Note: <span id="debug-note">--</span></p>
-      <p>Confidence: <span id="debug-confidence">--</span></p>
+      <p>Dominance: <span id="debug-confidence">--</span></p>
 
       <p class="dbg-section">CHORD</p>
       <p>Target: <span id="debug-target">--</span></p>
       <p>Notes: <span id="debug-target-notes">--</span></p>
-      <p>Live Match: <span id="debug-live-match">--</span></p>
-      <p>Last Window: <span id="debug-notes-heard">--</span> &rarr; <span id="debug-chord-match">--</span></p>
+      <p>Heard: <span id="debug-notes-heard">--</span></p>
+      <p>Chord energy: <span id="debug-live-match">--</span></p>
+      <p>Hold: <span id="debug-chord-match">--</span></p>
 
       <p class="dbg-section">GAME</p>
       <p>Obstacle: <span id="debug-distance">--</span></p>

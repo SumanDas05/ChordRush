@@ -1,12 +1,13 @@
-// Chord Runner - Step 19: Debug Panel
+// Chord Runner - debug.js (v2)
 // Reads (never writes) globals from other files:
-//   audio.js:  isMicConnected, collectedNotes, matchChord()
+//   audio.js:  isMicConnected, latestHeardNotes, latestMatch, latestRms, MATCH_ENERGY_RATIO
 //   script.js: currentChord, gameState, jumpQueued, getNearestUpcomingObstacle(),
 //              PERFECT_DISTANCE, GOOD_DISTANCE
 
 const debugPanelEl = document.getElementById("pitch-debug");
 const debugToggleBtn = document.getElementById("debug-toggle-btn");
 const debugMicEl = document.getElementById("debug-mic");
+const debugRmsEl = document.getElementById("debug-rms");
 const debugTargetEl = document.getElementById("debug-target");
 const debugTargetNotesEl = document.getElementById("debug-target-notes");
 const debugLiveMatchEl = document.getElementById("debug-live-match");
@@ -29,28 +30,23 @@ document.addEventListener("keydown", (e) => {
 });
 
 function updateDebugPanel() {
-  // Skip all work while the panel is hidden
   if (debugPanelEl.classList.contains("hidden")) return;
 
-  // ---- Mic status ----
+  // ---- Mic ----
   debugMicEl.textContent = isMicConnected ? "CONNECTED" : "NOT CONNECTED";
   debugMicEl.className = isMicConnected ? "dbg-good" : "dbg-bad";
+  debugRmsEl.textContent = isMicConnected ? latestRms.toFixed(4) : "--";
 
-  // ---- Target chord + live note check ----
+  // ---- Target chord and which of its notes are heard right now ----
   if (currentChord) {
     debugTargetEl.textContent = currentChord.name;
 
     if (isMicConnected) {
-      // collectedNotes is filled by audio.js during each listening window,
-      // so this updates live as notes are heard.
       debugTargetNotesEl.textContent = currentChord.notes
-        .map((n) => (collectedNotes.has(n) ? `${n} ✓` : `${n} ✗`))
+        .map((n) => (latestHeardNotes.has(n) ? `${n} ✓` : `${n} ✗`))
         .join("   ");
-
-      const liveMatch = collectedNotes.size > 0
-        ? matchChord(collectedNotes, currentChord).matchPercent
-        : 0;
-      debugLiveMatchEl.textContent = `${liveMatch}%`;
+      debugLiveMatchEl.textContent =
+        `${Math.round(latestMatch.energyRatio * 100)}% (need ${Math.round(MATCH_ENERGY_RATIO * 100)}%)`;
     } else {
       debugTargetNotesEl.textContent = currentChord.notes.join("   ");
       debugLiveMatchEl.textContent = "--";
@@ -61,7 +57,7 @@ function updateDebugPanel() {
     debugLiveMatchEl.textContent = "--";
   }
 
-  // ---- Obstacle distance + which timing zone it falls in ----
+  // ---- Obstacle distance and timing zone ----
   const { distance } = getNearestUpcomingObstacle();
   if (distance === Infinity) {
     debugDistanceEl.textContent = "-- (no obstacle ahead)";
@@ -76,5 +72,4 @@ function updateDebugPanel() {
   debugStateEl.textContent = `${gameState}${jumpQueued ? " | jump queued" : ""}`;
 }
 
-// Refresh 10 times per second (no need to match the 60fps game loop)
 setInterval(updateDebugPanel, 100);
