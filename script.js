@@ -1,4 +1,4 @@
-// Chord Runner - script.js (commit 1: upgraded guitar detection hooks)
+// Chord Runner - script.js (commit 2: full-screen canvas, bigger player, aligned jump physics)
 // Depends on: chords.js, chordDiagram.js, audio.js, effects.js (loaded before this file)
 
 // ---- Screen elements ----
@@ -28,36 +28,39 @@ const chordFeedbackEl = document.getElementById("chord-feedback");
 const debugModeToggle = document.getElementById("debug-mode-toggle");
 
 // ---- Canvas setup ----
+// Width is fixed (1280 logical units). Height follows the window's shape, so the
+// scene fills the whole screen without stretching. See resizeCanvas() near the bottom.
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
 
-const GAME_WIDTH = canvas.width;
-const GAME_HEIGHT = canvas.height;
-const GROUND_Y = GAME_HEIGHT - 50;
+const BASE_WIDTH = 1280;
+const GROUND_HEIGHT = 110;
+let GAME_WIDTH = BASE_WIDTH;
+let GAME_HEIGHT = 720;
+let GROUND_Y = GAME_HEIGHT - GROUND_HEIGHT;
 
 // ---- Game state ----
 let gameState = "start"; // "start" | "playing" | "paused" | "gameover"
 
-// ---- Physics constants ----
-const GRAVITY = 0.55;
-const JUMP_FORCE = -12;
+// ---- Physics ----
+// Jump arc: rises for 32 frames, 211 px high, about 65 frames in the air.
+const GRAVITY = 0.4;
+const JUMP_FORCE = -13;
+const AIR_FRAMES = (-2 * JUMP_FORCE) / GRAVITY;
+const INVULNERABLE_MS = Math.round((AIR_FRAMES / 60) * 1000);
 const STARTING_LIVES = 3;
 
 // ---- Difficulty-dependent values (overwritten by applySelectedDifficulty()) ----
-let WORLD_SPEED = 1.2;
-let PERFECT_DISTANCE = 260;
-let GOOD_DISTANCE = 550;
+let WORLD_SPEED = 2.6;
+let PERFECT_DISTANCE = 520;
+let GOOD_DISTANCE = 820;
 let selectedDifficulty = "beginner";
 
-// ---- Jump queue system ----
-// A correct chord queues a jump, which fires automatically once the nearest
-// obstacle reaches a safe distance, so a correct chord always clears it.
+// ---- Jump queue ----
+// A correct chord queues a jump. The jump fires automatically at exactly the
+// right moment, so the character is at the top of its arc as it passes over the rock.
 let jumpQueued = false;
-let JUMP_TRIGGER_DISTANCE = 80; // recalculated per difficulty
-
-// Brief invulnerability during a queued jump (safety net against unfair hits)
-let isInvulnerable = false;
-const INVULNERABILITY_DURATION_MS = 900;
+let isInvulnerable = false; // safety net during the jump arc
 
 // ---- Score / lives / combo ----
 let score = 0;
@@ -85,12 +88,12 @@ function setNewChord() {
   resetChordHold(); // from audio.js: start listening fresh for the new chord
 }
 
-// ---- Player object ----
+// ---- Player (72x90 = the old 40x50 character scaled by 1.8) ----
 const player = {
-  x: 100,
-  y: GROUND_Y - 50,
-  width: 40,
-  height: 50,
+  x: 220,
+  y: GROUND_Y - 90,
+  width: 72,
+  height: 90,
   velocityY: 0,
   isOnGround: true
 };
@@ -122,23 +125,33 @@ function jump() {
   }
 }
 
+// Hitboxes are a bit smaller than the drawings, which is fairer to the player
+function getPlayerHitbox() {
+  return { x: player.x + 14, y: player.y + 12, width: player.width - 28, height: player.height - 16 };
+}
+
+function getObstacleHitbox(o) {
+  return { x: o.x + 8, y: o.y + 10, width: o.width - 16, height: o.height - 10 };
+}
+
 // ---- Obstacles ----
 let obstacles = [];
 let framesSinceLastSpawn = 0;
-let framesUntilNextSpawn = randomSpawnGap();
+let framesUntilNextSpawn = 45; // the first rock appears quickly
 
 function randomSpawnGap() {
-  // Roughly 4.5-6.5 seconds between obstacles at 60fps
+  // 4.5 - 6.5 seconds between rocks at 60fps
   return Math.floor(Math.random() * 120) + 270;
 }
 
 function spawnObstacle() {
-  const size = 30 + Math.random() * 20;
+  const width = 52 + Math.random() * 16;
+  const height = 54 + Math.random() * 18;
   obstacles.push({
-    x: GAME_WIDTH + size,
-    y: GROUND_Y - size,
-    width: size,
-    height: size,
+    x: GAME_WIDTH + width,
+    y: GROUND_Y - height,
+    width,
+    height,
     passed: false
   });
 }
@@ -183,14 +196,21 @@ function getNearestUpcomingObstacle() {
   return { obstacle: nearest, distance: nearestDistance };
 }
 
-// ---- Jump queue processing (runs every frame) ----
+// ---- Jump queue processing ----
+// Distance (obstacle.x - player.x) at which a jump must start, so the rock's
+// centre passes the player's centre exactly at the top of the arc.
+function getJumpTriggerDistance(obstacle) {
+  const framesToApex = -JUMP_FORCE / GRAVITY;
+  return framesToApex * WORLD_SPEED + (player.width - obstacle.width) / 2;
+}
+
 function updateJumpQueue() {
   if (!jumpQueued) return;
 
   const { obstacle, distance } = getNearestUpcomingObstacle();
-  if (!obstacle) return; // keep the jump ready until the next rock appears
+  if (!obstacle) return; // keep the jump ready until the next rock shows up
 
-  if (distance <= JUMP_TRIGGER_DISTANCE) {
+  if (distance <= getJumpTriggerDistance(obstacle)) {
     executeQueuedJump();
   }
 }
@@ -202,14 +222,14 @@ function executeQueuedJump() {
   isInvulnerable = true;
   setTimeout(() => {
     isInvulnerable = false;
-  }, INVULNERABILITY_DURATION_MS);
+  }, INVULNERABLE_MS);
 }
 
 // ---- Chord attempt handling ----
 // Called by Debug Mode (Spacebar / tap) or by real guitar detection (audio.js).
 function handleChordAttempt(isCorrect) {
   const popupX = player.x + player.width / 2;
-  const popupY = player.y - 12;
+  const popupY = player.y - 14;
 
   if (!isCorrect) {
     wrongCount++;
@@ -223,7 +243,7 @@ function handleChordAttempt(isCorrect) {
 
   correctCount++;
 
-  // Timing quality is based on how close the obstacle was when you played the chord
+  // Timing quality = how close the rock was when you played the chord
   const { distance } = getNearestUpcomingObstacle();
 
   let timingLabel, points, feedbackClass;
@@ -255,7 +275,7 @@ function handleChordAttempt(isCorrect) {
 
   // ---- Effects ----
   const isPerfect = feedbackClass === "perfect";
-  spawnParticles(popupX, player.y + player.height / 2, isPerfect ? "#ffd700" : "#1db954", isPerfect ? 22 : 12);
+  spawnParticles(popupX, player.y + player.height / 2, isPerfect ? "#ffd700" : "#1db954", isPerfect ? 26 : 14);
   spawnPopup(`${timingLabel.replace("!", "")} +${gained}`, popupX, popupY, isPerfect ? "#ffd700" : "#1db954");
   playSound(isPerfect ? "perfect" : "good");
   retriggerAnimation(comboEl, "combo-pulse");
@@ -263,16 +283,15 @@ function handleChordAttempt(isCorrect) {
   // Combo milestone every 5 in a row
   if (combo > 0 && combo % 5 === 0) {
     spawnPopup(`COMBO x${combo}!`, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, "#ff9f1c");
-    spawnParticles(GAME_WIDTH / 2, GAME_HEIGHT / 2, "#ff9f1c", 30);
+    spawnParticles(GAME_WIDTH / 2, GAME_HEIGHT / 2, "#ff9f1c", 34);
     playSound("combo");
   }
 
-  // Queue the jump (fires automatically at a safe distance)
   jumpQueued = true;
 
   setTimeout(() => {
     if (gameState === "playing") setNewChord();
-  }, 400);
+  }, 500);
 }
 
 // ---- audio.js checks this before listening ----
@@ -281,7 +300,6 @@ function shouldListenForChords() {
 }
 
 // ---- Score / combo / lives helpers ----
-// Multiplier: x1 base, +0.1 per combo point, capped at x3
 function getComboMultiplier() {
   return Math.min(1 + combo * 0.1, 3);
 }
@@ -300,10 +318,9 @@ function loseLife() {
   combo = 0;
   updateHUD();
 
-  // Hit effects
   triggerShake(14);
-  spawnParticles(player.x + player.width / 2, player.y + player.height / 2, "#e94560", 24);
-  spawnPopup("OUCH!", player.x + player.width / 2, player.y - 12, "#e94560");
+  spawnParticles(player.x + player.width / 2, player.y + player.height / 2, "#e94560", 28);
+  spawnPopup("OUCH!", player.x + player.width / 2, player.y - 14, "#e94560");
   playSound("hit");
 
   if (lives <= 0) {
@@ -336,8 +353,9 @@ function checkCollision(a, b) {
 function checkAllCollisions() {
   if (isInvulnerable) return;
 
+  const playerBox = getPlayerHitbox();
   for (let i = obstacles.length - 1; i >= 0; i--) {
-    if (checkCollision(player, obstacles[i])) {
+    if (checkCollision(playerBox, getObstacleHitbox(obstacles[i]))) {
       obstacles.splice(i, 1);
       loseLife();
     }
@@ -367,9 +385,13 @@ function triggerGameOver() {
 function startGame() {
   applySelectedDifficulty();
 
+  gameoverScreen.classList.add("hidden");
+  startScreen.classList.add("hidden");
+  gameScreen.classList.remove("hidden");
+
   obstacles = [];
   framesSinceLastSpawn = 0;
-  framesUntilNextSpawn = randomSpawnGap();
+  framesUntilNextSpawn = 45;
   score = 0;
   combo = 0;
   highestCombo = 0;
@@ -379,16 +401,14 @@ function startGame() {
   lives = STARTING_LIVES;
   jumpQueued = false;
   isInvulnerable = false;
-  resetEffects();
+
+  resizeCanvas(); // also rebuilds the background
   resetPlayer();
   resetChordDetector(); // from audio.js
   setNewChord();
   updateHUD();
 
-  gameoverScreen.classList.add("hidden");
-  startScreen.classList.add("hidden");
-  gameScreen.classList.remove("hidden");
-
+  pauseBtn.textContent = "⏸ Pause";
   gameState = "playing";
   requestAnimationFrame(gameLoop);
 }
@@ -421,9 +441,6 @@ function applySelectedDifficulty() {
   WORLD_SPEED = preset.worldSpeed;
   PERFECT_DISTANCE = preset.perfectDistance;
   GOOD_DISTANCE = preset.goodDistance;
-
-  // Keeps the jump's real-world timing margin consistent across speeds
-  JUMP_TRIGGER_DISTANCE = Math.round(WORLD_SPEED * 68);
 }
 
 // ---- Button wiring ----
@@ -452,16 +469,8 @@ onChordWrong = function () {
   if (gameState === "playing") handleChordAttempt(false);
 };
 
-// ---- The Game Loop ----
-function gameLoop() {
-  if (gameState !== "playing") return;
-
-  updatePlayer();
-  updateObstacles();
-  updateJumpQueue();
-  checkAllCollisions();
-  updateEffects();
-
+// ---- Rendering ----
+function renderFrame() {
   ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
   ctx.save();
@@ -474,11 +483,47 @@ function gameLoop() {
   renderPlayer();
   renderEffects();
   ctx.restore();
+}
 
+// ---- The Game Loop ----
+function gameLoop() {
+  if (gameState !== "playing") return;
+
+  updatePlayer();
+  updateObstacles();
+  updateJumpQueue();
+  checkAllCollisions();
+  updateEffects();
+
+  renderFrame();
   requestAnimationFrame(gameLoop);
 }
 
-// Debug Mode on touch devices: tap the game area instead of pressing Spacebar
+// ---- Canvas sizing: fill the whole window without distortion ----
+function resizeCanvas() {
+  const oldGround = GROUND_Y;
+  const aspect = window.innerHeight / Math.max(window.innerWidth, 1);
+
+  GAME_WIDTH = BASE_WIDTH;
+  GAME_HEIGHT = Math.round(Math.min(Math.max(BASE_WIDTH * aspect, 520), 900));
+  GROUND_Y = GAME_HEIGHT - GROUND_HEIGHT;
+
+  canvas.width = GAME_WIDTH;   // (changing width/height also clears the canvas)
+  canvas.height = GAME_HEIGHT;
+
+  // keep everything standing on the ground
+  const delta = GROUND_Y - oldGround;
+  player.y += delta;
+  for (const o of obstacles) o.y += delta;
+
+  resetEffects();
+  if (gameState === "paused" || gameState === "gameover") renderFrame();
+}
+
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+// Debug Mode on touch devices: tap the screen instead of pressing Spacebar
 canvas.addEventListener("pointerdown", () => {
   if (gameState === "playing" && debugModeToggle.checked) {
     handleChordAttempt(true);

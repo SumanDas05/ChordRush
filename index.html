@@ -26,10 +26,12 @@
     <button id="practice-btn">🎸 Practice Mode</button>
   </div>
 
-  <!-- GAME SCREEN (hidden until Start is clicked) -->
+  <!-- GAME SCREEN: the canvas fills the whole window, everything else floats on top -->
   <div id="game-screen" class="hidden">
 
-    <!-- TOP HUD: score, combo, lives -->
+    <canvas id="game-canvas" width="1280" height="720"></canvas>
+
+    <!-- TOP BAR -->
     <div id="hud">
       <div class="hud-item">
         <span class="hud-label">SCORE</span>
@@ -43,12 +45,13 @@
         <span class="hud-label">LIVES</span>
         <span id="lives" class="hud-value">❤️❤️❤️</span>
       </div>
-          <button id="debug-toggle-btn">🛠 Debug</button>
+      <div class="hud-spacer"></div>
+      <button id="debug-toggle-btn">🛠 Debug</button>
       <button id="pause-btn">⏸ Pause</button>
     </div>
 
-    <!-- CHORD PANEL: current chord + diagram -->
-    <div id="chord-panel">
+    <!-- CHORD CARD (top centre) -->
+    <div id="chord-card">
       <p class="play-label">PLAY THIS CHORD</p>
       <h2 id="chord-name">C MAJOR</h2>
       <div id="chord-diagram">
@@ -57,16 +60,16 @@
       <p id="chord-feedback"></p>
     </div>
 
-    <!-- MICROPHONE PANEL -->
-    <div id="mic-panel">
-            <button id="mic-btn">🎤 Enable Microphone</button>
+    <!-- MICROPHONE BAR (bottom centre) -->
+    <div id="mic-bar">
+      <button id="mic-btn">🎤 Enable Microphone</button>
       <div id="mic-level" title="Microphone level">
         <div id="mic-level-fill"></div>
       </div>
       <p id="mic-status">Microphone not connected</p>
       <label id="sound-label">
         <input type="checkbox" id="sound-toggle" />
-        🔊 Sound FX (use headphones)
+        🔊 Sound FX (headphones)
       </label>
       <label id="debug-mode-label">
         <input type="checkbox" id="debug-mode-toggle" />
@@ -74,8 +77,8 @@
       </label>
     </div>
 
-       <!-- DEBUG PANEL (hidden by default, toggled with the Debug button or D key) -->
-       <div id="pitch-debug" class="hidden">
+    <!-- DEBUG PANEL (hidden by default; Debug button or D key) -->
+    <div id="pitch-debug" class="hidden">
       <p class="dbg-title">🛠 DEBUG PANEL</p>
 
       <p>MIC: <span id="debug-mic" class="dbg-bad">NOT CONNECTED</span></p>
@@ -96,11 +99,6 @@
       <p class="dbg-section">GAME</p>
       <p>Obstacle: <span id="debug-distance">--</span></p>
       <p>State: <span id="debug-state">--</span></p>
-    </div>
-
-    <!-- GAME AREA: canvas lives here -->
-    <div id="game-area">
-      <canvas id="game-canvas" width="860" height="350"></canvas>
     </div>
 
     <!-- GAME OVER OVERLAY -->

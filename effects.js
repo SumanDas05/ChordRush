@@ -193,7 +193,22 @@ function renderGround() {
 }
 
 function renderPlayer() {
-  const { x, y, width: w, height: h } = player;
+  // The original 40x50 character is drawn at (0,0), then scaled up to the player's real size
+  const scale = player.width / 40;
+  const x = 0, y = 0, w = 40, h = 50;
+
+  // Ground shadow (shrinks while jumping)
+  const lift = Math.max(0, GROUND_Y - (player.y + player.height));
+  const shScale = Math.max(0.3, 1 - lift / 300);
+  ctx.fillStyle = `rgba(0, 0, 0, ${0.35 * shScale})`;
+  ctx.beginPath();
+  ctx.ellipse(player.x + player.width / 2, GROUND_Y + 5, player.width * 0.6 * shScale, 8 * shScale, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.scale(scale, scale);
+
   const bodyColor = isInvulnerable ? "#ffffff" : "#ffcc00";
   const legH = 14;
   const bodyH = h - legH;
@@ -228,8 +243,9 @@ function renderPlayer() {
   // Eye
   ctx.fillStyle = "#1a1a2e";
   ctx.fillRect(x + 26, y + 8, 6, 6);
-}
 
+  ctx.restore();
+}
 function renderObstacles() {
   for (const o of obstacles) {
     const bottom = o.y + o.height;

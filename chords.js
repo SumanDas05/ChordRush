@@ -78,23 +78,23 @@ const DIFFICULTY_PRESETS = {
   beginner: {
     label: "Beginner",
     chordKeys: ["C", "G", "Am", "Em"],
-    worldSpeed: 1.2,
-    perfectDistance: 260,
-    goodDistance: 550
+    worldSpeed: 2.6,
+    perfectDistance: 520,
+    goodDistance: 820
   },
   intermediate: {
     label: "Intermediate",
     chordKeys: ["C", "G", "Am", "Em", "D", "A", "E"],
-    worldSpeed: 1.8,
-    perfectDistance: 220,
-    goodDistance: 480
+    worldSpeed: 3.4,
+    perfectDistance: 480,
+    goodDistance: 780
   },
   advanced: {
     label: "Advanced",
     chordKeys: ["C", "G", "Am", "Em", "D", "A", "E", "Am7", "C7", "G7", "D7"],
-    worldSpeed: 2.4,
-    perfectDistance: 180,
-    goodDistance: 400
+    worldSpeed: 4.2,
+    perfectDistance: 440,
+    goodDistance: 740
   }
 };
 
