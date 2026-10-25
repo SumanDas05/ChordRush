@@ -88,12 +88,12 @@ function setNewChord() {
   resetChordHold(); // from audio.js: start listening fresh for the new chord
 }
 
-// ---- Player (72x90 = the old 40x50 character scaled by 1.8) ----
+// ---- Player (the new guitarist is 72 wide and 104 tall) ----
 const player = {
   x: 220,
-  y: GROUND_Y - 90,
+  y: GROUND_Y - 104,
   width: 72,
-  height: 90,
+  height: 104,
   velocityY: 0,
   isOnGround: true
 };
@@ -152,7 +152,8 @@ function spawnObstacle() {
     y: GROUND_Y - height,
     width,
     height,
-    passed: false
+    passed: false,
+    jitter: Array.from({ length: 7 }, () => 0.88 + Math.random() * 0.2) // makes every rock look different
   });
 }
 
