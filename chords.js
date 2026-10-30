@@ -227,4 +227,4 @@ function applyDifficulty(levelKey) {
   activeChordKeys = INSTRUMENTS[currentInstrument].difficultyChords[levelKey];
   lastChordKey = null;
   return SPEED_PRESETS[levelKey];
-}
+}   
