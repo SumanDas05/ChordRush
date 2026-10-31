@@ -1,4 +1,4 @@
-// Chord Runner - script.js (commit 2: full-screen canvas, bigger player, aligned jump physics)
+// Chord Runner - script.js (after Step U3: instrument picker)
 // Depends on: chords.js, chordDiagram.js, audio.js, effects.js (loaded before this file)
 
 // ---- Screen elements ----
@@ -56,6 +56,9 @@ let PERFECT_DISTANCE = 520;
 let GOOD_DISTANCE = 820;
 let selectedDifficulty = "beginner";
 
+// ---- Instrument (guitar or ukulele), remembered between visits ----
+let selectedInstrument = localStorage.getItem("chordRunnerInstrument") === "ukulele" ? "ukulele" : "guitar";
+
 // ---- Jump queue ----
 // A correct chord queues a jump. The jump fires automatically at exactly the
 // right moment, so the character is at the top of its arc as it passes over the rock.
@@ -88,7 +91,7 @@ function setNewChord() {
   resetChordHold(); // from audio.js: start listening fresh for the new chord
 }
 
-// ---- Player (the new guitarist is 72 wide and 104 tall) ----
+// ---- Player (72 wide, 104 tall) ----
 const player = {
   x: 220,
   y: GROUND_Y - 104,
@@ -227,7 +230,7 @@ function executeQueuedJump() {
 }
 
 // ---- Chord attempt handling ----
-// Called by Debug Mode (Spacebar / tap) or by real guitar detection (audio.js).
+// Called by Debug Mode (Spacebar / tap) or by real instrument detection (audio.js).
 function handleChordAttempt(isCorrect) {
   const popupX = player.x + player.width / 2;
   const popupY = player.y - 14;
@@ -436,6 +439,27 @@ difficultyButtons.forEach((btn) => {
     selectedDifficulty = btn.dataset.level;
   });
 });
+
+// ---- Instrument selection (start screen) ----
+const instrumentButtons = document.querySelectorAll(".instrument-btn");
+
+function selectInstrument(name) {
+  selectedInstrument = name;
+  localStorage.setItem("chordRunnerInstrument", name);
+
+  // Highlight only the card that matches the chosen instrument
+  instrumentButtons.forEach((b) => {
+    b.classList.toggle("selected", b.dataset.instrument === name);
+  });
+
+  setInstrument(name); // chords.js: switches the chord set
+}
+
+instrumentButtons.forEach((btn) => {
+  btn.addEventListener("click", () => selectInstrument(btn.dataset.instrument));
+});
+
+selectInstrument(selectedInstrument); // apply the saved choice when the page loads
 
 function applySelectedDifficulty() {
   const preset = applyDifficulty(selectedDifficulty); // from chords.js
